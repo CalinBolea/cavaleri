@@ -33,6 +33,29 @@ class CombatServiceTest extends TestCase
                     'health' => 25, 'speed' => 6, 'abilities' => ['flying', 'retaliate_twice'],
                     'fightValue' => 351,
                 ],
+                'swordsman' => [
+                    'id' => 'swordsman', 'name' => 'Swordsman', 'tier' => 4,
+                    'attack' => 10, 'defense' => 12, 'minDamage' => 6, 'maxDamage' => 9,
+                    'health' => 35, 'speed' => 5, 'abilities' => [], 'fightValue' => 555,
+                ],
+                'skeleton' => [
+                    'id' => 'skeleton', 'name' => 'Skeleton', 'tier' => 1,
+                    'attack' => 5, 'defense' => 4, 'minDamage' => 1, 'maxDamage' => 3,
+                    'health' => 6, 'speed' => 4, 'abilities' => ['undead'], 'fightValue' => 75,
+                ],
+                'vampire' => [
+                    'id' => 'vampire', 'name' => 'Vampire', 'tier' => 4,
+                    'attack' => 10, 'defense' => 9, 'minDamage' => 5, 'maxDamage' => 8,
+                    'health' => 30, 'speed' => 6,
+                    'abilities' => ['undead', 'flying', 'no_retaliation', 'life_drain'],
+                    'fightValue' => 555,
+                ],
+                'lich' => [
+                    'id' => 'lich', 'name' => 'Lich', 'tier' => 5,
+                    'attack' => 13, 'defense' => 10, 'minDamage' => 11, 'maxDamage' => 13,
+                    'health' => 30, 'speed' => 6, 'abilities' => ['undead', 'ranged'],
+                    'shots' => 12, 'fightValue' => 848,
+                ],
             ];
             return $units[$unitId] ?? null;
         });
@@ -163,5 +186,75 @@ class CombatServiceTest extends TestCase
         if ($firstAction && !$firstAction['isRetaliation']) {
             $this->assertGreaterThanOrEqual(1, $firstAction['damage']);
         }
+    }
+
+    public function testNoRetaliationAbility(): void
+    {
+        // Vampires have no_retaliation — defenders should never retaliate
+        $attacker = [['factionId' => 'necropolis', 'unitId' => 'vampire', 'quantity' => 5, 'slotIndex' => 0]];
+        $defender = [['factionId' => 'castle', 'unitId' => 'swordsman', 'quantity' => 5, 'slotIndex' => 0]];
+
+        $result = $this->combatService->resolveCombat($attacker, $defender);
+
+        foreach ($result->rounds as $round) {
+            foreach ($round['actions'] as $action) {
+                if ($action['attacker'] === 'vampire') {
+                    // The next action should not be a retaliation against vampire
+                    continue;
+                }
+                if ($action['defender'] === 'vampire' && $action['isRetaliation']) {
+                    $this->fail('Swordsman should not retaliate against vampire (no_retaliation)');
+                }
+            }
+        }
+        $this->assertTrue(true);
+    }
+
+    public function testCrossFactionCombat(): void
+    {
+        $attacker = [['factionId' => 'castle', 'unitId' => 'swordsman', 'quantity' => 10, 'slotIndex' => 0]];
+        $defender = [['factionId' => 'necropolis', 'unitId' => 'skeleton', 'quantity' => 20, 'slotIndex' => 0]];
+
+        $result = $this->combatService->resolveCombat($attacker, $defender);
+
+        // Swordsmen are much stronger, should win
+        $this->assertTrue($result->attackerWon);
+        $this->assertGreaterThan(0, $result->experienceGained);
+    }
+
+    public function testMultiStackCombat(): void
+    {
+        $attacker = [
+            ['factionId' => 'castle', 'unitId' => 'pikeman', 'quantity' => 10, 'slotIndex' => 0],
+            ['factionId' => 'castle', 'unitId' => 'archer', 'quantity' => 5, 'slotIndex' => 1],
+        ];
+        $defender = [
+            ['factionId' => 'necropolis', 'unitId' => 'skeleton', 'quantity' => 15, 'slotIndex' => 0],
+            ['factionId' => 'necropolis', 'unitId' => 'lich', 'quantity' => 2, 'slotIndex' => 1],
+        ];
+
+        $result = $this->combatService->resolveCombat($attacker, $defender);
+
+        // Both sides should have 2 loss entries
+        $this->assertCount(2, $result->attackerLosses);
+        $this->assertCount(2, $result->defenderLosses);
+    }
+
+    public function testLifeDrainHealing(): void
+    {
+        // Vampires should heal by draining — run many times and check they tend to survive better
+        $vampireSurvivors = 0;
+        $runs = 20;
+        for ($i = 0; $i < $runs; $i++) {
+            $attacker = [['factionId' => 'necropolis', 'unitId' => 'vampire', 'quantity' => 5, 'slotIndex' => 0]];
+            $defender = [['factionId' => 'castle', 'unitId' => 'pikeman', 'quantity' => 15, 'slotIndex' => 0]];
+
+            $result = $this->combatService->resolveCombat($attacker, $defender);
+            if ($result->attackerWon) {
+                $vampireSurvivors += $result->attackerLosses[0]['remaining'];
+            }
+        }
+        // Vampires (no retaliation + life drain) should win most fights and have survivors
+        $this->assertGreaterThan(0, $vampireSurvivors);
     }
 }

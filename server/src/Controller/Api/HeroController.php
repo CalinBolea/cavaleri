@@ -35,6 +35,10 @@ class HeroController extends AbstractController
             return new JsonResponse(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
         }
 
+        if ($game->getStatus() !== 'in_progress') {
+            return new JsonResponse(['error' => 'Game is over'], Response::HTTP_BAD_REQUEST);
+        }
+
         $hero = $this->heroRepository->find($heroId);
         if (!$hero || !$hero->getPlayer()->getGame()->getId()->equals($game->getId())) {
             return new JsonResponse(['error' => 'Hero not found'], Response::HTTP_NOT_FOUND);
@@ -105,6 +109,11 @@ class HeroController extends AbstractController
                 // Remove defeated neutral stack
                 $game->removeNeutralStack($neutralStack);
                 $this->em->remove($neutralStack);
+
+                // Check win condition
+                if ($game->getNeutralStacks()->isEmpty()) {
+                    $game->setStatus('won');
+                }
 
                 // Apply attacker losses
                 foreach ($result->attackerLosses as $loss) {
@@ -201,6 +210,20 @@ class HeroController extends AbstractController
                         if ($result->attackerWon) {
                             $otherPlayer->removeHero($enemyHero);
                             $this->em->remove($enemyHero);
+
+                            // Check win condition
+                            $allEnemiesDefeated = $game->getNeutralStacks()->isEmpty();
+                            if ($allEnemiesDefeated) {
+                                foreach ($game->getPlayers() as $p) {
+                                    if (!$p->getId()->equals($hero->getPlayer()->getId()) && !$p->getHeroes()->isEmpty()) {
+                                        $allEnemiesDefeated = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            if ($allEnemiesDefeated) {
+                                $game->setStatus('won');
+                            }
 
                             foreach ($result->attackerLosses as $loss) {
                                 foreach ($hero->getArmySlots() as $slot) {

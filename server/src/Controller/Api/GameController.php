@@ -76,13 +76,13 @@ class GameController extends AbstractController
         $slot1 = new ArmySlot();
         $slot1->setSlotIndex(0);
         $slot1->setUnitId('pikeman');
-        $slot1->setQuantity(20);
+        $slot1->setQuantity(random_int(10, 50));
         $hero->addArmySlot($slot1);
 
         $slot2 = new ArmySlot();
         $slot2->setSlotIndex(1);
         $slot2->setUnitId('archer');
-        $slot2->setQuantity(10);
+        $slot2->setQuantity(random_int(10, 50));
         $hero->addArmySlot($slot2);
 
         $player->addHero($hero);
@@ -124,6 +124,10 @@ class GameController extends AbstractController
 
         if (!$game) {
             return new JsonResponse(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        if ($game->getStatus() !== 'in_progress') {
+            return new JsonResponse(['error' => 'Game is over'], Response::HTTP_BAD_REQUEST);
         }
 
         $this->turnManager->endTurn($game);

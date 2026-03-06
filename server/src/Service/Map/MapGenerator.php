@@ -39,6 +39,32 @@ class MapGenerator
         return $map;
     }
 
+    /**
+     * Tier pools by distance bracket, with [factionId, unitId, minQty, maxQty].
+     */
+    private const NEUTRAL_POOLS = [
+        'near' => [
+            ['castle', 'pikeman', 5, 20],
+            ['necropolis', 'skeleton', 6, 25],
+        ],
+        'mid' => [
+            ['castle', 'pikeman', 8, 25],
+            ['castle', 'archer', 3, 12],
+            ['castle', 'swordsman', 2, 6],
+            ['necropolis', 'skeleton', 10, 30],
+            ['necropolis', 'walking_dead', 4, 12],
+            ['necropolis', 'wight', 2, 6],
+        ],
+        'far' => [
+            ['castle', 'griffin', 3, 8],
+            ['castle', 'monk', 2, 6],
+            ['castle', 'cavalier', 1, 3],
+            ['necropolis', 'vampire', 2, 5],
+            ['necropolis', 'lich', 2, 4],
+            ['necropolis', 'black_knight', 1, 3],
+        ],
+    ];
+
     public function generateNeutralStacks(array $mapData, int $count = 8): array
     {
         $height = count($mapData);
@@ -48,7 +74,6 @@ class MapGenerator
         $candidates = [];
         for ($row = 0; $row < $height; $row++) {
             for ($col = 0; $col < $width; $col++) {
-                // Skip starting zone (rows 1-5, cols 1-5)
                 if ($row >= 1 && $row <= 5 && $col >= 1 && $col <= 5) {
                     continue;
                 }
@@ -66,24 +91,21 @@ class MapGenerator
             $distance = abs($pos['posX'] - 3) + abs($pos['posY'] - 3);
 
             if ($distance < 6) {
-                $unitId = 'pikeman';
-                $quantity = random_int(5, 20);
+                $pool = self::NEUTRAL_POOLS['near'];
             } elseif ($distance < 12) {
-                $roll = random_int(0, 1);
-                $unitId = $roll === 0 ? 'pikeman' : 'archer';
-                $quantity = $unitId === 'pikeman' ? random_int(5, 20) : random_int(3, 12);
+                $pool = self::NEUTRAL_POOLS['mid'];
             } else {
-                $roll = random_int(0, 1);
-                $unitId = $roll === 0 ? 'archer' : 'griffin';
-                $quantity = $unitId === 'archer' ? random_int(3, 12) : random_int(2, 8);
+                $pool = self::NEUTRAL_POOLS['far'];
             }
+
+            $pick = $pool[array_rand($pool)];
 
             $stacks[] = [
                 'posX' => $pos['posX'],
                 'posY' => $pos['posY'],
-                'factionId' => 'castle',
-                'unitId' => $unitId,
-                'quantity' => $quantity,
+                'factionId' => $pick[0],
+                'unitId' => $pick[1],
+                'quantity' => random_int($pick[2], $pick[3]),
             ];
         }
 

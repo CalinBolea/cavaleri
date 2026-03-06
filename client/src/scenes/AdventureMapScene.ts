@@ -343,6 +343,20 @@ export class AdventureMapScene extends Phaser.Scene {
             }
 
             this.refreshDisplay();
+
+            const currentState = gameStore.getState();
+            if (currentState?.status === 'won') {
+                this.showVictory();
+                return;
+            }
+
+            if (result.combat?.occurred && !result.combat.result.attackerWon) {
+                const hero = gameStore.getSelectedHero();
+                if (!hero) {
+                    this.showGameOver();
+                    return;
+                }
+            }
         } catch (error: any) {
             console.warn('Move failed:', error.message);
         } finally {
@@ -532,7 +546,85 @@ export class AdventureMapScene extends Phaser.Scene {
         return `Month ${state.currentMonth}, Week ${state.currentWeek}, Day ${state.currentDay}`;
     }
 
+    private showGameOver(): void {
+        const { width, height } = this.cameras.main;
+
+        // Full-screen dark overlay
+        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+            .setDepth(200)
+            .setScrollFactor(0);
+
+        // "Game Over" title
+        this.add.text(width / 2, height / 2 - 60, 'Game Over', {
+            fontFamily: 'serif',
+            fontSize: '48px',
+            color: '#cc3333',
+            fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        // Subtitle
+        this.add.text(width / 2, height / 2, 'Your hero has fallen.', {
+            fontFamily: 'serif',
+            fontSize: '20px',
+            color: '#ffffff',
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        // "New Game" button
+        const btnBg = this.add.rectangle(width / 2, height / 2 + 60, 160, 44, 0x2a2a4a)
+            .setStrokeStyle(2, 0xc4a44e)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(201)
+            .setScrollFactor(0);
+
+        this.add.text(width / 2, height / 2 + 60, 'New Game', {
+            fontFamily: 'serif',
+            fontSize: '20px',
+            color: '#c4a44e',
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        btnBg.on('pointerover', () => btnBg.setFillStyle(0x3a3a5a));
+        btnBg.on('pointerout', () => btnBg.setFillStyle(0x2a2a4a));
+        btnBg.on('pointerdown', () => this.scene.start('MainMenuScene'));
+    }
+
+    private showVictory(): void {
+        const { width, height } = this.cameras.main;
+
+        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+            .setDepth(200)
+            .setScrollFactor(0);
+
+        this.add.text(width / 2, height / 2 - 60, 'Victory!', {
+            fontFamily: 'serif',
+            fontSize: '48px',
+            color: '#c4a44e',
+            fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        this.add.text(width / 2, height / 2, 'All enemies have been defeated.', {
+            fontFamily: 'serif',
+            fontSize: '20px',
+            color: '#ffffff',
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        const btnBg = this.add.rectangle(width / 2, height / 2 + 60, 160, 44, 0x2a2a4a)
+            .setStrokeStyle(2, 0xc4a44e)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(201)
+            .setScrollFactor(0);
+
+        this.add.text(width / 2, height / 2 + 60, 'New Game', {
+            fontFamily: 'serif',
+            fontSize: '20px',
+            color: '#c4a44e',
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        btnBg.on('pointerover', () => btnBg.setFillStyle(0x3a3a5a));
+        btnBg.on('pointerout', () => btnBg.setFillStyle(0x2a2a4a));
+        btnBg.on('pointerdown', () => this.scene.start('MainMenuScene'));
+    }
+
     private capitalize(s: string): string {
-        return s.charAt(0).toUpperCase() + s.slice(1);
+        return s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
 }

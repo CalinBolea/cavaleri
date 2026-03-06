@@ -120,8 +120,26 @@ class CombatService
                     'isRetaliation' => false,
                 ];
 
-                // Retaliation (only in melee, and defender must be alive)
-                if (!$isRanged && $combatants[$targetIdx]['quantity'] > 0) {
+                // Life drain: heal attacker based on damage dealt
+                if (in_array('life_drain', $attacker['unitData']['abilities'] ?? []) && $damage > 0 && $attacker['quantity'] > 0) {
+                    $hp = $attacker['unitData']['health'];
+                    $maxHp = $attacker['quantity'] * $hp;
+                    $currentHp = ($attacker['quantity'] - 1) * $hp + $attacker['topStackHp'];
+                    $healedHp = min($damage, $maxHp - $currentHp + ($attacker['startingQuantity'] - $attacker['quantity']) * $hp);
+                    if ($healedHp > 0) {
+                        $restoredUnits = (int) floor(($attacker['topStackHp'] + $healedHp - 1) / $hp);
+                        $attacker['quantity'] = min($attacker['startingQuantity'], $attacker['quantity'] + $restoredUnits);
+                        $attacker['topStackHp'] = $hp - (($attacker['quantity'] * $hp - ($currentHp + $healedHp)) % $hp);
+                        if ($attacker['topStackHp'] > $hp) {
+                            $attacker['topStackHp'] = $hp;
+                        }
+                        $attacker['totalHp'] = ($attacker['quantity'] - 1) * $hp + $attacker['topStackHp'];
+                    }
+                }
+
+                // Retaliation (only in melee, defender alive, and attacker doesn't have no_retaliation)
+                $attackerAbilities = $attacker['unitData']['abilities'] ?? [];
+                if (!$isRanged && !in_array('no_retaliation', $attackerAbilities) && $combatants[$targetIdx]['quantity'] > 0) {
                     $maxRetaliations = in_array('retaliate_twice', $combatants[$targetIdx]['unitData']['abilities'] ?? []) ? 2 : 1;
                     $retaliationCount = $combatants[$targetIdx]['retaliatedThisRound'] ? 1 : 0;
 

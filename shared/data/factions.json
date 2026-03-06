@@ -58,6 +58,123 @@
           "cost": { "gold": 2000, "wood": 5, "ore": 5 },
           "prerequisites": ["guardhouse"],
           "produces": "griffin"
+        },
+        {
+          "id": "barracks",
+          "name": "Barracks",
+          "cost": { "gold": 2000, "wood": 10, "ore": 10 },
+          "prerequisites": ["griffin_tower"],
+          "produces": "swordsman"
+        },
+        {
+          "id": "monastery",
+          "name": "Monastery",
+          "cost": { "gold": 3000, "wood": 5, "ore": 5 },
+          "prerequisites": ["mage_guild_1", "barracks"],
+          "produces": "monk"
+        },
+        {
+          "id": "training_grounds",
+          "name": "Training Grounds",
+          "cost": { "gold": 5000, "wood": 20, "ore": 20 },
+          "prerequisites": ["barracks"],
+          "produces": "cavalier"
+        },
+        {
+          "id": "portal_of_glory",
+          "name": "Portal of Glory",
+          "cost": { "gold": 10000, "wood": 10, "ore": 10 },
+          "prerequisites": ["training_grounds"],
+          "produces": "angel"
+        }
+      ]
+    },
+    {
+      "id": "necropolis",
+      "name": "Necropolis",
+      "description": "Undead lords commanding armies of the dead.",
+      "primaryResource": "gold",
+      "buildings": [
+        {
+          "id": "village_hall",
+          "name": "Village Hall",
+          "cost": { "gold": 0 },
+          "prerequisites": [],
+          "income": { "gold": 500 }
+        },
+        {
+          "id": "town_hall",
+          "name": "Town Hall",
+          "cost": { "gold": 2500 },
+          "prerequisites": ["village_hall", "tavern"],
+          "income": { "gold": 1000 }
+        },
+        {
+          "id": "tavern",
+          "name": "Tavern",
+          "cost": { "gold": 500, "wood": 5 },
+          "prerequisites": []
+        },
+        {
+          "id": "fort",
+          "name": "Fort",
+          "cost": { "gold": 2000, "wood": 20, "ore": 20 },
+          "prerequisites": ["tavern"]
+        },
+        {
+          "id": "mage_guild_1",
+          "name": "Mage Guild Level 1",
+          "cost": { "gold": 2000, "wood": 5, "ore": 5 },
+          "prerequisites": []
+        },
+        {
+          "id": "cursed_temple",
+          "name": "Cursed Temple",
+          "cost": { "gold": 400, "wood": 5 },
+          "prerequisites": [],
+          "produces": "skeleton"
+        },
+        {
+          "id": "graveyard",
+          "name": "Graveyard",
+          "cost": { "gold": 1000, "wood": 5, "ore": 5 },
+          "prerequisites": ["cursed_temple"],
+          "produces": "walking_dead"
+        },
+        {
+          "id": "tomb_of_souls",
+          "name": "Tomb of Souls",
+          "cost": { "gold": 1500, "wood": 5, "ore": 5 },
+          "prerequisites": ["graveyard"],
+          "produces": "wight"
+        },
+        {
+          "id": "estate",
+          "name": "Estate",
+          "cost": { "gold": 2500, "wood": 10, "ore": 10 },
+          "prerequisites": ["tomb_of_souls"],
+          "produces": "vampire"
+        },
+        {
+          "id": "mausoleum",
+          "name": "Mausoleum",
+          "cost": { "gold": 4000, "wood": 5, "ore": 5 },
+          "prerequisites": ["mage_guild_1", "estate"],
+          "produces": "lich"
+        },
+        {
+          "id": "hall_of_darkness",
+          "name": "Hall of Darkness",
+          "cost": { "gold": 6000, "wood": 20, "ore": 20 },
+          "prerequisites": ["estate"],
+          "produces": "black_knight"
+        },
+        {
+          "id": "dragon_vault",
+          "name": "Dragon Vault",
+          "cost": { "gold": 10000, "wood": 10, "ore": 10 },
+          "prerequisites": ["hall_of_darkness"],
+          "produces": "bone_dragon"
         }
       ]
     }
