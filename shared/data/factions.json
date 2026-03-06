@@ -1,0 +1,65 @@
+{
+  "factions": [
+    {
+      "id": "castle",
+      "name": "Castle",
+      "description": "Knights and clerics defending the realm of order.",
+      "primaryResource": "gold",
+      "buildings": [
+        {
+          "id": "village_hall",
+          "name": "Village Hall",
+          "cost": { "gold": 0 },
+          "prerequisites": [],
+          "income": { "gold": 500 }
+        },
+        {
+          "id": "town_hall",
+          "name": "Town Hall",
+          "cost": { "gold": 2500 },
+          "prerequisites": ["village_hall", "tavern"],
+          "income": { "gold": 1000 }
+        },
+        {
+          "id": "tavern",
+          "name": "Tavern",
+          "cost": { "gold": 500, "wood": 5 },
+          "prerequisites": []
+        },
+        {
+          "id": "fort",
+          "name": "Fort",
+          "cost": { "gold": 2000, "wood": 20, "ore": 20 },
+          "prerequisites": ["tavern"]
+        },
+        {
+          "id": "mage_guild_1",
+          "name": "Mage Guild Level 1",
+          "cost": { "gold": 2000, "wood": 5, "ore": 5 },
+          "prerequisites": []
+        },
+        {
+          "id": "guardhouse",
+          "name": "Guardhouse",
+          "cost": { "gold": 500, "wood": 5 },
+          "prerequisites": [],
+          "produces": "pikeman"
+        },
+        {
+          "id": "archers_tower",
+          "name": "Archer's Tower",
+          "cost": { "gold": 1000, "wood": 5, "ore": 5 },
+          "prerequisites": ["guardhouse"],
+          "produces": "archer"
+        },
+        {
+          "id": "griffin_tower",
+          "name": "Griffin Tower",
+          "cost": { "gold": 2000, "wood": 5, "ore": 5 },
+          "prerequisites": ["guardhouse"],
+          "produces": "griffin"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Faction Units",
+  "type": "object",
+  "required": ["faction", "units"],
+  "properties": {
+    "faction": { "type": "string" },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "tier", "attack", "defense", "minDamage", "maxDamage", "health", "speed", "growth", "cost"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "tier": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "attack": { "type": "integer", "minimum": 0 },
+          "defense": { "type": "integer", "minimum": 0 },
+          "minDamage": { "type": "integer", "minimum": 0 },
+          "maxDamage": { "type": "integer", "minimum": 0 },
+          "health": { "type": "integer", "minimum": 1 },
+          "speed": { "type": "integer", "minimum": 1 },
+          "growth": { "type": "integer", "minimum": 1 },
+          "cost": {
+            "type": "object",
+            "properties": {
+              "gold": { "type": "integer" }
+            },
+            "required": ["gold"]
+          },
+          "abilities": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "shots": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

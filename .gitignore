@@ -1,0 +1,28 @@
+# Dependencies
+server/vendor/
+client/node_modules/
+
+# Environment
+.env.local
+.env.*.local
+server/.env.local
+
+# Build artifacts
+client/dist/
+server/var/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+docker/data/
+
+# PHPUnit
+server/.phpunit.result.cache

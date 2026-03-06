@@ -1,0 +1,48 @@
+{
+  "faction": "castle",
+  "units": [
+    {
+      "id": "pikeman",
+      "name": "Pikeman",
+      "tier": 1,
+      "attack": 4,
+      "defense": 5,
+      "minDamage": 1,
+      "maxDamage": 3,
+      "health": 10,
+      "speed": 4,
+      "growth": 14,
+      "cost": { "gold": 60 },
+      "abilities": []
+    },
+    {
+      "id": "archer",
+      "name": "Archer",
+      "tier": 2,
+      "attack": 6,
+      "defense": 3,
+      "minDamage": 2,
+      "maxDamage": 3,
+      "health": 10,
+      "speed": 4,
+      "growth": 9,
+      "cost": { "gold": 100 },
+      "abilities": ["ranged"],
+      "shots": 12
+    },
+    {
+      "id": "griffin",
+      "name": "Griffin",
+      "tier": 3,
+      "attack": 8,
+      "defense": 8,
+      "minDamage": 3,
+      "maxDamage": 6,
+      "health": 25,
+      "speed": 6,
+      "growth": 7,
+      "cost": { "gold": 200 },
+      "abilities": ["flying", "retaliate_twice"]
+    }
+  ]
+}

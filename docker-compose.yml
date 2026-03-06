@@ -1,0 +1,72 @@
+services:
+  nginx:
+    build:
+      context: ./docker/nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./server:/var/www/server:cached
+    depends_on:
+      - php
+
+  php:
+    build:
+      context: ./docker/php
+    volumes:
+      - ./server:/var/www/server:cached
+      - ./shared:/var/www/shared:cached
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://cavaleri:cavaleri@postgres:5432/cavaleri?serverVersion=16&charset=utf8"
+      MERCURE_URL: "http://mercure/.well-known/mercure"
+      MERCURE_PUBLIC_URL: "http://localhost:3000/.well-known/mercure"
+      MERCURE_JWT_SECRET: "cavaleri_mercure_secret_key_change_in_prod"
+      APP_ENV: dev
+      APP_SECRET: "change_me_in_production"
+      CORS_ALLOW_ORIGIN: "^https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cavaleri
+      POSTGRES_PASSWORD: cavaleri
+      POSTGRES_DB: cavaleri
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cavaleri"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  node:
+    build:
+      context: ./docker/node
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/var/www/client:cached
+      - ./shared:/var/www/shared:cached
+      - node_modules:/var/www/client/node_modules
+    working_dir: /var/www/client
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  mercure:
+    image: dunglas/mercure
+    ports:
+      - "3000:80"
+    environment:
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_KEY: "cavaleri_mercure_secret_key_change_in_prod"
+      MERCURE_SUBSCRIBER_JWT_KEY: "cavaleri_mercure_secret_key_change_in_prod"
+      MERCURE_EXTRA_DIRECTIVES: |
+        cors_origins http://localhost:5173
+        anonymous
+
+volumes:
+  pgdata:
+  node_modules:
