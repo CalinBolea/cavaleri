@@ -13,7 +13,8 @@
       "speed": 4,
       "growth": 14,
       "cost": { "gold": 60 },
-      "abilities": []
+      "abilities": [],
+      "fightValue": 80
     },
     {
       "id": "archer",
@@ -28,7 +29,8 @@
       "growth": 9,
       "cost": { "gold": 100 },
       "abilities": ["ranged"],
-      "shots": 12
+      "shots": 12,
+      "fightValue": 126
     },
     {
       "id": "griffin",
@@ -42,7 +44,8 @@
       "speed": 6,
       "growth": 7,
       "cost": { "gold": 200 },
-      "abilities": ["flying", "retaliate_twice"]
+      "abilities": ["flying", "retaliate_twice"],
+      "fightValue": 351
     }
   ]
 }

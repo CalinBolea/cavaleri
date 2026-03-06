@@ -32,7 +32,8 @@
             "type": "array",
             "items": { "type": "string" }
           },
-          "shots": { "type": "integer" }
+          "shots": { "type": "integer" },
+          "fightValue": { "type": "integer" }
         }
       }
     }

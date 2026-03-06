@@ -1,4 +1,4 @@
-import { GameState } from '../state/GameStore';
+import { GameState, CombatData } from '../state/GameStore';
 
 const API_BASE = '/api';
 
@@ -6,6 +6,7 @@ export interface MoveResponse {
     hero: any;
     path: number[][];
     cost: number;
+    combat?: CombatData | null;
     game: GameState;
 }
 

@@ -34,6 +34,36 @@ export interface PlayerData {
     heroes: HeroData[];
 }
 
+export interface NeutralStackData {
+    id: string;
+    posX: number;
+    posY: number;
+    factionId: string;
+    unitId: string;
+    quantity: number;
+}
+
+export interface CombatLoss {
+    unitId: string;
+    lost: number;
+    remaining: number;
+}
+
+export interface CombatResultData {
+    winner: string;
+    attackerWon: boolean;
+    attackerLosses: CombatLoss[];
+    defenderLosses: CombatLoss[];
+    experienceGained: number;
+    rounds: any[];
+}
+
+export interface CombatData {
+    occurred: boolean;
+    type: string;
+    result: CombatResultData;
+}
+
 export interface GameState {
     id: string;
     status: string;
@@ -44,6 +74,7 @@ export interface GameState {
     mapHeight: number;
     mapData: string[][];
     players: PlayerData[];
+    neutralStacks: NeutralStackData[];
 }
 
 class GameStore {

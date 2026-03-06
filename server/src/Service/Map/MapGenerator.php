@@ -39,6 +39,57 @@ class MapGenerator
         return $map;
     }
 
+    public function generateNeutralStacks(array $mapData, int $count = 8): array
+    {
+        $height = count($mapData);
+        $width = count($mapData[0]);
+
+        // Collect passable tiles outside the 5x5 starting grass zone
+        $candidates = [];
+        for ($row = 0; $row < $height; $row++) {
+            for ($col = 0; $col < $width; $col++) {
+                // Skip starting zone (rows 1-5, cols 1-5)
+                if ($row >= 1 && $row <= 5 && $col >= 1 && $col <= 5) {
+                    continue;
+                }
+                if (self::isPassable($mapData[$row][$col])) {
+                    $candidates[] = ['posX' => $col, 'posY' => $row];
+                }
+            }
+        }
+
+        shuffle($candidates);
+        $selected = array_slice($candidates, 0, min($count, count($candidates)));
+
+        $stacks = [];
+        foreach ($selected as $pos) {
+            $distance = abs($pos['posX'] - 3) + abs($pos['posY'] - 3);
+
+            if ($distance < 6) {
+                $unitId = 'pikeman';
+                $quantity = random_int(5, 20);
+            } elseif ($distance < 12) {
+                $roll = random_int(0, 1);
+                $unitId = $roll === 0 ? 'pikeman' : 'archer';
+                $quantity = $unitId === 'pikeman' ? random_int(5, 20) : random_int(3, 12);
+            } else {
+                $roll = random_int(0, 1);
+                $unitId = $roll === 0 ? 'archer' : 'griffin';
+                $quantity = $unitId === 'archer' ? random_int(3, 12) : random_int(2, 8);
+            }
+
+            $stacks[] = [
+                'posX' => $pos['posX'],
+                'posY' => $pos['posY'],
+                'factionId' => 'castle',
+                'unitId' => $unitId,
+                'quantity' => $quantity,
+            ];
+        }
+
+        return $stacks;
+    }
+
     public static function getMovementCost(string $terrain): int
     {
         return match ($terrain) {

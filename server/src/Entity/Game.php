@@ -47,6 +47,10 @@ class Game
     #[ORM\OneToMany(targetEntity: Player::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $players;
 
+    /** @var Collection<int, NeutralStack> */
+    #[ORM\OneToMany(targetEntity: NeutralStack::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $neutralStacks;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -56,6 +60,7 @@ class Game
     public function __construct()
     {
         $this->players = new ArrayCollection();
+        $this->neutralStacks = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -176,6 +181,31 @@ class Game
         return $this;
     }
 
+    /** @return Collection<int, NeutralStack> */
+    public function getNeutralStacks(): Collection
+    {
+        return $this->neutralStacks;
+    }
+
+    public function addNeutralStack(NeutralStack $neutralStack): static
+    {
+        if (!$this->neutralStacks->contains($neutralStack)) {
+            $this->neutralStacks->add($neutralStack);
+            $neutralStack->setGame($this);
+        }
+        return $this;
+    }
+
+    public function removeNeutralStack(NeutralStack $neutralStack): static
+    {
+        if ($this->neutralStacks->removeElement($neutralStack)) {
+            if ($neutralStack->getGame() === $this) {
+                $neutralStack->setGame(null);
+            }
+        }
+        return $this;
+    }
+
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
@@ -211,7 +241,8 @@ class Game
             'mapWidth' => $this->mapWidth,
             'mapHeight' => $this->mapHeight,
             'mapData' => $this->mapData,
-            'players' => array_map(fn(Player $p) => $p->toArray(), $this->players->toArray()),
+            'players' => array_values(array_map(fn(Player $p) => $p->toArray(), $this->players->toArray())),
+            'neutralStacks' => array_values(array_map(fn(NeutralStack $n) => $n->toArray(), $this->neutralStacks->toArray())),
             'createdAt' => $this->createdAt?->format(\DateTimeInterface::ATOM),
             'updatedAt' => $this->updatedAt?->format(\DateTimeInterface::ATOM),
         ];

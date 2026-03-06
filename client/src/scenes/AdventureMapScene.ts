@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameStore, GameState } from '../state/GameStore';
 import { apiClient } from '../network/ApiClient';
+import { CombatResultDialog } from '../ui/CombatResultDialog';
 
 const HEX_SIZE = 24;
 const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
@@ -27,6 +28,9 @@ export class AdventureMapScene extends Phaser.Scene {
     private resourceTexts: Record<string, Phaser.GameObjects.Text> = {};
     private hoverGraphics!: Phaser.GameObjects.Graphics;
     private heroLabel!: Phaser.GameObjects.Text | null;
+    private neutralGraphics!: Phaser.GameObjects.Graphics;
+    private neutralLabels: Phaser.GameObjects.Text[] = [];
+    private armyTexts: Phaser.GameObjects.Text[] = [];
 
     constructor() {
         super({ key: 'AdventureMapScene' });
@@ -48,6 +52,9 @@ export class AdventureMapScene extends Phaser.Scene {
         this.hexGraphics = this.add.graphics();
         this.mapContainer.add(this.hexGraphics);
 
+        this.neutralGraphics = this.add.graphics();
+        this.mapContainer.add(this.neutralGraphics);
+
         this.hoverGraphics = this.add.graphics();
         this.mapContainer.add(this.hoverGraphics);
 
@@ -55,12 +62,15 @@ export class AdventureMapScene extends Phaser.Scene {
         this.mapContainer.add(this.heroGraphics);
 
         this.drawMap(state);
+        this.drawNeutralStacks(state);
         this.drawHero(state);
         this.createUI(state);
+        this.createLegend();
 
         // Input: click to move
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (pointer.y < UI_HEIGHT) return; // Don't process clicks on UI
+            if (pointer.y < UI_HEIGHT) return; // Don't process clicks on top UI
+            if (pointer.y > this.cameras.main.height - 50) return; // Don't process clicks on bottom panel
             this.handleMapClick(pointer);
         });
 
@@ -103,6 +113,33 @@ export class AdventureMapScene extends Phaser.Scene {
                 this.hexGraphics.lineStyle(1, 0x000000, 0.3);
                 this.drawHexagon(this.hexGraphics, x, y);
             }
+        }
+    }
+
+    private drawNeutralStacks(state: GameState): void {
+        this.neutralGraphics.clear();
+        for (const label of this.neutralLabels) {
+            label.destroy();
+        }
+        this.neutralLabels = [];
+
+        if (!state.neutralStacks) return;
+
+        for (const stack of state.neutralStacks) {
+            const { x, y } = this.hexToPixel(stack.posX, stack.posY);
+
+            this.neutralGraphics.fillStyle(0xcc3333, 1);
+            this.neutralGraphics.fillCircle(x, y, HEX_SIZE * 0.5);
+
+            const label = this.add.text(x, y + HEX_SIZE * 0.7, `${this.capitalize(stack.unitId)}\nx${stack.quantity}`, {
+                fontFamily: 'Arial',
+                fontSize: '11px',
+                color: '#ffffff',
+                fontStyle: 'bold',
+                align: 'center',
+            }).setOrigin(0.5);
+            this.mapContainer.add(label);
+            this.neutralLabels.push(label);
         }
     }
 
@@ -206,6 +243,71 @@ export class AdventureMapScene extends Phaser.Scene {
         endTurnBg.on('pointerover', () => endTurnBg.setFillStyle(0x3a3a5a));
         endTurnBg.on('pointerout', () => endTurnBg.setFillStyle(0x2a2a4a));
         endTurnBg.on('pointerdown', () => this.handleEndTurn());
+
+        // Bottom army panel
+        const { height } = this.cameras.main;
+        const panelHeight = 50;
+
+        this.add.rectangle(width / 2, height - panelHeight / 2, width, panelHeight, 0x1a1a2e, 0.95)
+            .setDepth(100)
+            .setScrollFactor(0);
+
+        this.add.rectangle(width / 2, height - panelHeight, width, 2, 0xc4a44e)
+            .setDepth(100)
+            .setScrollFactor(0);
+
+        this.armyTexts = [];
+        if (hero) {
+            const slotWidth = width / Math.max(hero.army.length, 1);
+            for (let i = 0; i < hero.army.length; i++) {
+                const slot = hero.army[i];
+                const txt = this.add.text(
+                    slotWidth * i + slotWidth / 2,
+                    height - panelHeight / 2,
+                    `${this.capitalize(slot.unitId)} x${slot.quantity}`,
+                    {
+                        fontFamily: 'Arial',
+                        fontSize: '14px',
+                        color: '#ffffff',
+                        fontStyle: 'bold',
+                    },
+                ).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+                this.armyTexts.push(txt);
+            }
+        }
+    }
+
+    private createLegend(): void {
+        const { height } = this.cameras.main;
+        const entries = Object.entries(TERRAIN_COLORS);
+        const padding = 8;
+        const rowHeight = 18;
+        const swatchSize = 10;
+        const panelWidth = 100;
+        const panelHeight = entries.length * rowHeight + padding * 2;
+        const panelX = 10;
+        const panelY = height - 50 - panelHeight - 10;
+
+        this.add.rectangle(
+            panelX + panelWidth / 2, panelY + panelHeight / 2,
+            panelWidth, panelHeight, 0x1a1a2e, 0.9,
+        ).setDepth(101).setScrollFactor(0);
+
+        for (let i = 0; i < entries.length; i++) {
+            const [terrain, color] = entries[i];
+            const y = panelY + padding + i * rowHeight + rowHeight / 2;
+
+            this.add.rectangle(
+                panelX + padding + swatchSize / 2, y,
+                swatchSize, swatchSize, color,
+            ).setDepth(101).setScrollFactor(0);
+
+            this.add.text(panelX + padding + swatchSize + 6, y, this.capitalize(terrain), {
+                fontFamily: 'Arial',
+                fontSize: '11px',
+                color: '#ffffff',
+            }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0);
+        }
     }
 
     private async handleMapClick(pointer: Phaser.Input.Pointer): Promise<void> {
@@ -234,6 +336,12 @@ export class AdventureMapScene extends Phaser.Scene {
                 await this.animateHeroPath(result.path);
             }
 
+            if (result.combat?.occurred) {
+                const dialog = new CombatResultDialog(this, result.combat.result);
+                dialog.show();
+                await dialog.waitForDismissal();
+            }
+
             this.refreshDisplay();
         } catch (error: any) {
             console.warn('Move failed:', error.message);
@@ -260,7 +368,7 @@ export class AdventureMapScene extends Phaser.Scene {
         if (!state) return;
 
         const player = gameStore.getCurrentPlayer()!;
-        const hero = gameStore.getSelectedHero()!;
+        const hero = gameStore.getSelectedHero();
 
         // Update day text
         this.dayText.setText(this.getDayString(state));
@@ -270,11 +378,35 @@ export class AdventureMapScene extends Phaser.Scene {
             this.resourceTexts[key].setText(String(player.resources[key as keyof typeof player.resources]));
         }
 
-        // Update movement points
-        this.movementText.setText(`MP: ${hero.movementPoints}/${hero.maxMovementPoints}`);
+        // Redraw neutral stacks
+        this.drawNeutralStacks(state);
 
-        // Redraw hero
-        this.drawHero(state);
+        if (hero) {
+            // Update movement points
+            this.movementText.setText(`MP: ${hero.movementPoints}/${hero.maxMovementPoints}`);
+            // Redraw hero
+            this.drawHero(state);
+            // Update army panel
+            for (let i = 0; i < this.armyTexts.length; i++) {
+                if (i < hero.army.length) {
+                    const slot = hero.army[i];
+                    this.armyTexts[i].setText(`${this.capitalize(slot.unitId)} x${slot.quantity}`);
+                    this.armyTexts[i].setVisible(true);
+                } else {
+                    this.armyTexts[i].setVisible(false);
+                }
+            }
+        } else {
+            this.movementText.setText('MP: --');
+            this.heroGraphics.clear();
+            if (this.heroLabel) {
+                this.heroLabel.destroy();
+                this.heroLabel = null;
+            }
+            for (const txt of this.armyTexts) {
+                txt.setVisible(false);
+            }
+        }
     }
 
     private animateHeroPath(path: number[][]): Promise<void> {
@@ -398,5 +530,9 @@ export class AdventureMapScene extends Phaser.Scene {
 
     private getDayString(state: GameState): string {
         return `Month ${state.currentMonth}, Week ${state.currentWeek}, Day ${state.currentDay}`;
+    }
+
+    private capitalize(s: string): string {
+        return s.charAt(0).toUpperCase() + s.slice(1);
     }
 }

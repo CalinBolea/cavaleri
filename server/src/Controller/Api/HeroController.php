@@ -4,6 +4,8 @@ namespace App\Controller\Api;
 
 use App\Repository\GameRepository;
 use App\Repository\HeroRepository;
+use App\Repository\NeutralStackRepository;
+use App\Service\GameEngine\CombatService;
 use App\Service\Map\PathfindingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,6 +22,8 @@ class HeroController extends AbstractController
         private GameRepository $gameRepository,
         private HeroRepository $heroRepository,
         private PathfindingService $pathfindingService,
+        private NeutralStackRepository $neutralStackRepository,
+        private CombatService $combatService,
     ) {
     }
 
@@ -72,12 +76,197 @@ class HeroController extends AbstractController
         $hero->setPosY($targetY);
         $hero->setMovementPoints($hero->getMovementPoints() - $cost);
 
+        $combatData = null;
+
+        // Check for neutral stack encounter
+        $neutralStack = $this->neutralStackRepository->findByPosition($game, $targetX, $targetY);
+        if ($neutralStack) {
+            $faction = $hero->getPlayer()->getFaction();
+            $attackerStacks = [];
+            foreach ($hero->getArmySlots() as $slot) {
+                $attackerStacks[] = [
+                    'factionId' => $faction,
+                    'unitId' => $slot->getUnitId(),
+                    'quantity' => $slot->getQuantity(),
+                    'slotIndex' => $slot->getSlotIndex(),
+                ];
+            }
+
+            $defenderStacks = [[
+                'factionId' => $neutralStack->getFactionId(),
+                'unitId' => $neutralStack->getUnitId(),
+                'quantity' => $neutralStack->getQuantity(),
+                'slotIndex' => 0,
+            ]];
+
+            $result = $this->combatService->resolveCombat($attackerStacks, $defenderStacks, $hero);
+
+            if ($result->attackerWon) {
+                // Remove defeated neutral stack
+                $game->removeNeutralStack($neutralStack);
+                $this->em->remove($neutralStack);
+
+                // Apply attacker losses
+                foreach ($result->attackerLosses as $loss) {
+                    foreach ($hero->getArmySlots() as $slot) {
+                        if ($slot->getSlotIndex() === $loss['slotIndex']) {
+                            if ($loss['remaining'] <= 0) {
+                                $hero->removeArmySlot($slot);
+                                $this->em->remove($slot);
+                            } else {
+                                $slot->setQuantity($loss['remaining']);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // Add XP
+                $hero->setExperience($hero->getExperience() + $result->experienceGained);
+            } else {
+                // Attacker lost: reset hero to penultimate path step
+                if (count($path) >= 2) {
+                    $prevStep = $path[count($path) - 2];
+                    $hero->setPosX($prevStep[0]);
+                    $hero->setPosY($prevStep[1]);
+                } else {
+                    // Only 1 step: stay at start
+                    $hero->setPosX($path[0][0]);
+                    $hero->setPosY($path[0][1]);
+                }
+
+                // If army wiped out, remove hero
+                $armyEmpty = true;
+                foreach ($hero->getArmySlots() as $slot) {
+                    // Check if this slot still has units after losses
+                    foreach ($result->attackerLosses as $loss) {
+                        if ($slot->getSlotIndex() === $loss['slotIndex']) {
+                            if ($loss['remaining'] <= 0) {
+                                $hero->removeArmySlot($slot);
+                                $this->em->remove($slot);
+                            } else {
+                                $slot->setQuantity($loss['remaining']);
+                                $armyEmpty = false;
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if ($armyEmpty) {
+                    $hero->getPlayer()->removeHero($hero);
+                    $this->em->remove($hero);
+                }
+            }
+
+            $combatData = [
+                'occurred' => true,
+                'type' => 'neutral',
+                'result' => $result->toArray(),
+            ];
+        }
+
+        // Check for enemy hero encounter
+        if (!$combatData) {
+            foreach ($game->getPlayers() as $otherPlayer) {
+                if ($otherPlayer->getId()->equals($hero->getPlayer()->getId())) {
+                    continue;
+                }
+                foreach ($otherPlayer->getHeroes() as $enemyHero) {
+                    if ($enemyHero->getPosX() === $targetX && $enemyHero->getPosY() === $targetY) {
+                        $faction = $hero->getPlayer()->getFaction();
+                        $attackerStacks = [];
+                        foreach ($hero->getArmySlots() as $slot) {
+                            $attackerStacks[] = [
+                                'factionId' => $faction,
+                                'unitId' => $slot->getUnitId(),
+                                'quantity' => $slot->getQuantity(),
+                                'slotIndex' => $slot->getSlotIndex(),
+                            ];
+                        }
+
+                        $enemyFaction = $otherPlayer->getFaction();
+                        $defenderStacks = [];
+                        foreach ($enemyHero->getArmySlots() as $slot) {
+                            $defenderStacks[] = [
+                                'factionId' => $enemyFaction,
+                                'unitId' => $slot->getUnitId(),
+                                'quantity' => $slot->getQuantity(),
+                                'slotIndex' => $slot->getSlotIndex(),
+                            ];
+                        }
+
+                        $result = $this->combatService->resolveCombat($attackerStacks, $defenderStacks, $hero, $enemyHero);
+
+                        if ($result->attackerWon) {
+                            $otherPlayer->removeHero($enemyHero);
+                            $this->em->remove($enemyHero);
+
+                            foreach ($result->attackerLosses as $loss) {
+                                foreach ($hero->getArmySlots() as $slot) {
+                                    if ($slot->getSlotIndex() === $loss['slotIndex']) {
+                                        if ($loss['remaining'] <= 0) {
+                                            $hero->removeArmySlot($slot);
+                                            $this->em->remove($slot);
+                                        } else {
+                                            $slot->setQuantity($loss['remaining']);
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+
+                            $hero->setExperience($hero->getExperience() + $result->experienceGained);
+                        } else {
+                            if (count($path) >= 2) {
+                                $prevStep = $path[count($path) - 2];
+                                $hero->setPosX($prevStep[0]);
+                                $hero->setPosY($prevStep[1]);
+                            } else {
+                                $hero->setPosX($path[0][0]);
+                                $hero->setPosY($path[0][1]);
+                            }
+
+                            $armyEmpty = true;
+                            foreach ($hero->getArmySlots() as $slot) {
+                                foreach ($result->attackerLosses as $loss) {
+                                    if ($slot->getSlotIndex() === $loss['slotIndex']) {
+                                        if ($loss['remaining'] <= 0) {
+                                            $hero->removeArmySlot($slot);
+                                            $this->em->remove($slot);
+                                        } else {
+                                            $slot->setQuantity($loss['remaining']);
+                                            $armyEmpty = false;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if ($armyEmpty) {
+                                $hero->getPlayer()->removeHero($hero);
+                                $this->em->remove($hero);
+                            }
+                        }
+
+                        $combatData = [
+                            'occurred' => true,
+                            'type' => 'hero',
+                            'result' => $result->toArray(),
+                        ];
+                        break 2;
+                    }
+                }
+            }
+        }
+
         $this->em->flush();
 
         return new JsonResponse([
             'hero' => $hero->toArray(),
             'path' => $path,
             'cost' => $cost,
+            'combat' => $combatData,
             'game' => $game->toArray(),
         ]);
     }

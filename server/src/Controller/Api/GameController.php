@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\ArmySlot;
 use App\Entity\Game;
 use App\Entity\Hero;
+use App\Entity\NeutralStack;
 use App\Entity\Player;
 use App\Repository\GameRepository;
 use App\Service\GameDataProvider;
@@ -85,6 +86,18 @@ class GameController extends AbstractController
         $hero->addArmySlot($slot2);
 
         $player->addHero($hero);
+
+        // Generate neutral stacks
+        $neutralStackData = $this->mapGenerator->generateNeutralStacks($mapData);
+        foreach ($neutralStackData as $stackData) {
+            $neutralStack = new NeutralStack();
+            $neutralStack->setPosX($stackData['posX']);
+            $neutralStack->setPosY($stackData['posY']);
+            $neutralStack->setFactionId($stackData['factionId']);
+            $neutralStack->setUnitId($stackData['unitId']);
+            $neutralStack->setQuantity($stackData['quantity']);
+            $game->addNeutralStack($neutralStack);
+        }
 
         $this->em->persist($game);
         $this->em->flush();
