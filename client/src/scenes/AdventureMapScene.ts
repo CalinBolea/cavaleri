@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameStore, GameState } from '../state/GameStore';
 import { apiClient } from '../network/ApiClient';
 import { CombatResultDialog } from '../ui/CombatResultDialog';
+import { findPath, getPathCost } from '../utils/pathfinding';
 
 const HEX_SIZE = 24;
 const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
@@ -31,6 +32,9 @@ export class AdventureMapScene extends Phaser.Scene {
     private neutralGraphics!: Phaser.GameObjects.Graphics;
     private neutralLabels: Phaser.GameObjects.Text[] = [];
     private armyTexts: Phaser.GameObjects.Text[] = [];
+    private pendingTarget: { col: number; row: number } | null = null;
+    private pathPreviewGraphics!: Phaser.GameObjects.Graphics;
+    private pathCostText: Phaser.GameObjects.Text | null = null;
 
     constructor() {
         super({ key: 'AdventureMapScene' });
@@ -58,8 +62,13 @@ export class AdventureMapScene extends Phaser.Scene {
         this.hoverGraphics = this.add.graphics();
         this.mapContainer.add(this.hoverGraphics);
 
+        this.pathPreviewGraphics = this.add.graphics();
+        this.mapContainer.add(this.pathPreviewGraphics);
+
         this.heroGraphics = this.add.graphics();
         this.mapContainer.add(this.heroGraphics);
+
+        this.pendingTarget = null;
 
         this.drawMap(state);
         this.drawNeutralStacks(state);
@@ -322,16 +331,42 @@ export class AdventureMapScene extends Phaser.Scene {
         const mapY = pointer.y - this.mapContainer.y;
         const hex = this.pixelToHex(mapX, mapY);
 
-        if (hex.col < 0 || hex.col >= state.mapWidth || hex.row < 0 || hex.row >= state.mapHeight) return;
-        if (hex.col === hero.posX && hex.row === hero.posY) return;
+        if (hex.col < 0 || hex.col >= state.mapWidth || hex.row < 0 || hex.row >= state.mapHeight) {
+            this.clearPathPreview();
+            return;
+        }
+        if (hex.col === hero.posX && hex.row === hero.posY) {
+            this.clearPathPreview();
+            return;
+        }
 
+        // Second click on same target → confirm move
+        if (this.pendingTarget && this.pendingTarget.col === hex.col && this.pendingTarget.row === hex.row) {
+            this.clearPathPreview();
+            await this.confirmMove(state, hero, hex.col, hex.row);
+            return;
+        }
+
+        // First click or different target → show preview
+        const path = findPath(state.mapData, hero.posX, hero.posY, hex.col, hex.row);
+        if (!path) {
+            this.clearPathPreview();
+            return;
+        }
+
+        const cost = getPathCost(state.mapData, path);
+        const reachable = cost <= hero.movementPoints;
+        this.drawPathPreview(path, reachable, cost);
+        this.pendingTarget = reachable ? { col: hex.col, row: hex.row } : null;
+    }
+
+    private async confirmMove(state: GameState, hero: { id: string; posX: number; posY: number }, col: number, row: number): Promise<void> {
         this.isMoving = true;
 
         try {
-            const result = await apiClient.moveHero(state.id, hero.id, hex.col, hex.row);
+            const result = await apiClient.moveHero(state.id, hero.id, col, row);
             gameStore.updateFromGameState(result.game);
 
-            // Animate hero along path
             if (result.path && result.path.length > 1) {
                 await this.animateHeroPath(result.path);
             }
@@ -351,8 +386,8 @@ export class AdventureMapScene extends Phaser.Scene {
             }
 
             if (result.combat?.occurred && !result.combat.result.attackerWon) {
-                const hero = gameStore.getSelectedHero();
-                if (!hero) {
+                const selectedHero = gameStore.getSelectedHero();
+                if (!selectedHero) {
                     this.showGameOver();
                     return;
                 }
@@ -364,7 +399,66 @@ export class AdventureMapScene extends Phaser.Scene {
         }
     }
 
+    private drawPathPreview(path: number[][], reachable: boolean, cost: number): void {
+        this.pathPreviewGraphics.clear();
+        if (this.pathCostText) {
+            this.pathCostText.destroy();
+            this.pathCostText = null;
+        }
+
+        const color = reachable ? 0x44ff44 : 0xff4444;
+        const alpha = 0.3;
+
+        for (let i = 1; i < path.length; i++) {
+            const [col, row] = path[i];
+            const { x, y } = this.hexToPixel(col, row);
+            this.pathPreviewGraphics.fillStyle(color, alpha);
+            this.drawFilledHex(this.pathPreviewGraphics, x, y);
+        }
+
+        // Cost text at destination hex
+        const [lastCol, lastRow] = path[path.length - 1];
+        const lastPos = this.hexToPixel(lastCol, lastRow);
+        this.pathCostText = this.add.text(lastPos.x, lastPos.y - HEX_SIZE - 4, `${cost}`, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: reachable ? '#44ff44' : '#ff4444',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3,
+        }).setOrigin(0.5);
+        this.mapContainer.add(this.pathCostText);
+    }
+
+    private drawFilledHex(graphics: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
+        const points: { x: number; y: number }[] = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 180) * (60 * i - 30);
+            points.push({
+                x: cx + HEX_SIZE * Math.cos(angle),
+                y: cy + HEX_SIZE * Math.sin(angle),
+            });
+        }
+        graphics.beginPath();
+        graphics.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < 6; i++) {
+            graphics.lineTo(points[i].x, points[i].y);
+        }
+        graphics.closePath();
+        graphics.fillPath();
+    }
+
+    private clearPathPreview(): void {
+        this.pathPreviewGraphics.clear();
+        if (this.pathCostText) {
+            this.pathCostText.destroy();
+            this.pathCostText = null;
+        }
+        this.pendingTarget = null;
+    }
+
     private async handleEndTurn(): Promise<void> {
+        this.clearPathPreview();
         const state = gameStore.getState();
         if (!state) return;
 
