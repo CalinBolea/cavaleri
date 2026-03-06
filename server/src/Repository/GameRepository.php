@@ -15,4 +15,14 @@ class GameRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Game::class);
     }
+
+    public function findInProgressOrderedByUpdated(): array
+    {
+        return $this->createQueryBuilder('g')
+            ->where('g.status = :status')
+            ->setParameter('status', 'in_progress')
+            ->orderBy('g.updatedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

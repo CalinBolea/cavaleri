@@ -230,7 +230,7 @@ export class AdventureMapScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
 
         // Movement points
-        this.movementText = this.add.text(width - 280, 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
+        this.movementText = this.add.text(width - 380, 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#88cc88',
@@ -252,6 +252,23 @@ export class AdventureMapScene extends Phaser.Scene {
         endTurnBg.on('pointerover', () => endTurnBg.setFillStyle(0x3a3a5a));
         endTurnBg.on('pointerout', () => endTurnBg.setFillStyle(0x2a2a4a));
         endTurnBg.on('pointerdown', () => this.handleEndTurn());
+
+        // Quit button
+        const quitBg = this.add.rectangle(width - 240, UI_HEIGHT / 2, 80, 40, 0x2a2a4a)
+            .setStrokeStyle(2, 0xc4a44e)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(101)
+            .setScrollFactor(0);
+
+        this.add.text(width - 240, UI_HEIGHT / 2, 'Quit', {
+            fontFamily: 'serif',
+            fontSize: '18px',
+            color: '#c4a44e',
+        }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+
+        quitBg.on('pointerover', () => quitBg.setFillStyle(0x3a3a5a));
+        quitBg.on('pointerout', () => quitBg.setFillStyle(0x2a2a4a));
+        quitBg.on('pointerdown', () => this.scene.start('MainMenuScene'));
 
         // Bottom army panel
         const { height } = this.cameras.main;

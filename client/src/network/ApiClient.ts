@@ -10,6 +10,17 @@ export interface MoveResponse {
     game: GameState;
 }
 
+export interface GameSummary {
+    id: string;
+    status: string;
+    currentDay: number;
+    currentWeek: number;
+    currentMonth: number;
+    players: { name: string; faction: string }[];
+    createdAt: string;
+    updatedAt: string;
+}
+
 class ApiClient {
     async createGame(playerName: string = 'Player 1', faction: string = 'castle'): Promise<GameState> {
         const response = await fetch(`${API_BASE}/games`, {
@@ -47,6 +58,12 @@ class ApiClient {
             throw new Error(error.error || 'Failed to move hero');
         }
 
+        return response.json();
+    }
+
+    async listGames(): Promise<GameSummary[]> {
+        const response = await fetch(`${API_BASE}/games`);
+        if (!response.ok) throw new Error(`Failed to list games: ${response.statusText}`);
         return response.json();
     }
 

@@ -30,6 +30,13 @@ class GameController extends AbstractController
     ) {
     }
 
+    #[Route('/games', name: 'api_games_index', methods: ['GET'])]
+    public function index(): JsonResponse
+    {
+        $games = $this->gameRepository->findInProgressOrderedByUpdated();
+        return new JsonResponse(array_map(fn(Game $g) => $g->toSummaryArray(), $games));
+    }
+
     #[Route('/games', name: 'api_games_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {

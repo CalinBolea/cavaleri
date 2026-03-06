@@ -229,6 +229,23 @@ class Game
         $this->updatedAt = new \DateTimeImmutable();
     }
 
+    public function toSummaryArray(): array
+    {
+        return [
+            'id' => $this->id?->toRfc4122(),
+            'status' => $this->status,
+            'currentDay' => $this->currentDay,
+            'currentWeek' => $this->currentWeek,
+            'currentMonth' => $this->currentMonth,
+            'players' => array_values(array_map(fn(Player $p) => [
+                'name' => $p->getName(),
+                'faction' => $p->getFaction(),
+            ], $this->players->toArray())),
+            'createdAt' => $this->createdAt?->format(\DateTimeInterface::ATOM),
+            'updatedAt' => $this->updatedAt?->format(\DateTimeInterface::ATOM),
+        ];
+    }
+
     public function toArray(): array
     {
         return [
