@@ -4,6 +4,8 @@ namespace App\Service\Map;
 
 class MapGenerator
 {
+    public const START_POSITIONS = [[3, 3], [16, 16], [16, 3], [3, 16]];
+
     private const TERRAIN_WEIGHTS = [
         'grass' => 50,
         'dirt' => 15,
@@ -12,7 +14,7 @@ class MapGenerator
         'mountain' => 10,
     ];
 
-    public function generate(int $width, int $height): array
+    public function generate(int $width, int $height, array $startPositions = [[3, 3]]): array
     {
         $map = [];
         $terrainPool = [];
@@ -29,10 +31,12 @@ class MapGenerator
             }
         }
 
-        // Clear area around starting position (3, 3)
-        for ($row = max(0, 1); $row <= min($height - 1, 5); $row++) {
-            for ($col = max(0, 1); $col <= min($width - 1, 5); $col++) {
-                $map[$row][$col] = 'grass';
+        // Clear grass in a ±2 radius around each starting position
+        foreach ($startPositions as [$startCol, $startRow]) {
+            for ($row = max(0, $startRow - 2); $row <= min($height - 1, $startRow + 2); $row++) {
+                for ($col = max(0, $startCol - 2); $col <= min($width - 1, $startCol + 2); $col++) {
+                    $map[$row][$col] = 'grass';
+                }
             }
         }
 
@@ -65,16 +69,24 @@ class MapGenerator
         ],
     ];
 
-    public function generateNeutralStacks(array $mapData, int $count = 8): array
+    public function generateNeutralStacks(array $mapData, int $count = 8, array $startPositions = [[3, 3]]): array
     {
         $height = count($mapData);
         $width = count($mapData[0]);
 
-        // Collect passable tiles outside the 5x5 starting grass zone
+        // Collect passable tiles outside the clear zone around each start position
         $candidates = [];
         for ($row = 0; $row < $height; $row++) {
             for ($col = 0; $col < $width; $col++) {
-                if ($row >= 1 && $row <= 5 && $col >= 1 && $col <= 5) {
+                // Skip tiles within ±2 of any start position
+                $inClearZone = false;
+                foreach ($startPositions as [$startCol, $startRow]) {
+                    if (abs($col - $startCol) <= 2 && abs($row - $startRow) <= 2) {
+                        $inClearZone = true;
+                        break;
+                    }
+                }
+                if ($inClearZone) {
                     continue;
                 }
                 if (self::isPassable($mapData[$row][$col])) {
@@ -88,11 +100,16 @@ class MapGenerator
 
         $stacks = [];
         foreach ($selected as $pos) {
-            $distance = abs($pos['posX'] - 3) + abs($pos['posY'] - 3);
+            // Distance tier based on minimum distance to any start position
+            $minDistance = PHP_INT_MAX;
+            foreach ($startPositions as [$startCol, $startRow]) {
+                $d = abs($pos['posX'] - $startCol) + abs($pos['posY'] - $startRow);
+                $minDistance = min($minDistance, $d);
+            }
 
-            if ($distance < 6) {
+            if ($minDistance < 6) {
                 $pool = self::NEUTRAL_POOLS['near'];
-            } elseif ($distance < 12) {
+            } elseif ($minDistance < 12) {
                 $pool = self::NEUTRAL_POOLS['mid'];
             } else {
                 $pool = self::NEUTRAL_POOLS['far'];

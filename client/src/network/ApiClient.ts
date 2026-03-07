@@ -2,6 +2,11 @@ import { GameState, CombatData } from '../state/GameStore';
 
 const API_BASE = '/api';
 
+export interface PlayerConfig {
+    name: string;
+    faction: string;
+}
+
 export interface MoveResponse {
     hero: any;
     path: number[][];
@@ -22,11 +27,11 @@ export interface GameSummary {
 }
 
 class ApiClient {
-    async createGame(playerName: string = 'Player 1', faction: string = 'castle'): Promise<GameState> {
+    async createGame(players: PlayerConfig[]): Promise<GameState> {
         const response = await fetch(`${API_BASE}/games`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerName, faction }),
+            body: JSON.stringify({ players }),
         });
 
         if (!response.ok) {

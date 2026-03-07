@@ -4,7 +4,7 @@ import { apiClient } from '../network/ApiClient';
 import { CombatResultDialog } from '../ui/CombatResultDialog';
 import { findPath, getPathCost } from '../utils/pathfinding';
 
-const HEX_SIZE = 24;
+const HEX_SIZE = 20;
 const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
 const HEX_HEIGHT = 2 * HEX_SIZE;
 const HEX_VERT_SPACING = HEX_HEIGHT * 0.75;
@@ -28,13 +28,15 @@ export class AdventureMapScene extends Phaser.Scene {
     private movementText!: Phaser.GameObjects.Text;
     private resourceTexts: Record<string, Phaser.GameObjects.Text> = {};
     private hoverGraphics!: Phaser.GameObjects.Graphics;
-    private heroLabel!: Phaser.GameObjects.Text | null;
+    private heroLabels: Phaser.GameObjects.Text[] = [];
     private neutralGraphics!: Phaser.GameObjects.Graphics;
     private neutralLabels: Phaser.GameObjects.Text[] = [];
     private armyTexts: Phaser.GameObjects.Text[] = [];
     private pendingTarget: { col: number; row: number } | null = null;
     private pathPreviewGraphics!: Phaser.GameObjects.Graphics;
     private pathCostText: Phaser.GameObjects.Text | null = null;
+    private playerIndicator!: Phaser.GameObjects.Text;
+    private playerIndicatorRect!: Phaser.GameObjects.Rectangle;
 
     constructor() {
         super({ key: 'AdventureMapScene' });
@@ -47,10 +49,12 @@ export class AdventureMapScene extends Phaser.Scene {
             return;
         }
 
-        this.heroLabel = null;
+        this.heroLabels = [];
 
-        // Create map container for camera scrolling
-        this.mapContainer = this.add.container(0, UI_HEIGHT);
+        // Create map container, centered horizontally
+        const mapPixelWidth = state.mapWidth * HEX_WIDTH + HEX_WIDTH / 2;
+        const mapOffsetX = Math.max(0, (this.cameras.main.width - mapPixelWidth) / 2);
+        this.mapContainer = this.add.container(mapOffsetX, UI_HEIGHT);
 
         // Create hex graphics within container
         this.hexGraphics = this.add.graphics();
@@ -81,18 +85,6 @@ export class AdventureMapScene extends Phaser.Scene {
             if (pointer.y < UI_HEIGHT) return; // Don't process clicks on top UI
             if (pointer.y > this.cameras.main.height - 50) return; // Don't process clicks on bottom panel
             this.handleMapClick(pointer);
-        });
-
-        // Camera controls with arrow keys and WASD
-        const cursors = this.input.keyboard!.createCursorKeys();
-        const wasd = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;
-
-        this.events.on('update', () => {
-            const speed = 5;
-            if (cursors.left.isDown || wasd.A.isDown) this.mapContainer.x += speed;
-            if (cursors.right.isDown || wasd.D.isDown) this.mapContainer.x -= speed;
-            if (cursors.up.isDown || wasd.W.isDown) this.mapContainer.y += speed;
-            if (cursors.down.isDown || wasd.S.isDown) this.mapContainer.y -= speed;
         });
 
         // Mouse hover for hex highlight
@@ -155,30 +147,43 @@ export class AdventureMapScene extends Phaser.Scene {
     private drawHero(state: GameState): void {
         this.heroGraphics.clear();
 
-        const hero = gameStore.getSelectedHero();
-        if (!hero) return;
-
-        const { x, y } = this.hexToPixel(hero.posX, hero.posY);
-
-        // Hero circle
-        this.heroGraphics.fillStyle(0xffcc00, 1);
-        this.heroGraphics.lineStyle(2, 0xffffff, 1);
-        this.heroGraphics.fillCircle(x, y, HEX_SIZE * 0.6);
-        this.heroGraphics.strokeCircle(x, y, HEX_SIZE * 0.6);
-
-        // Remove old hero label if it exists
-        if (this.heroLabel) {
-            this.heroLabel.destroy();
+        // Remove old hero labels
+        for (const label of this.heroLabels) {
+            label.destroy();
         }
+        this.heroLabels = [];
 
-        // Hero letter
-        this.heroLabel = this.add.text(x, y, 'H', {
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            color: '#000000',
-            fontStyle: 'bold',
-        }).setOrigin(0.5);
-        this.mapContainer.add(this.heroLabel);
+        const currentPlayer = gameStore.getCurrentPlayer();
+
+        for (const player of state.players) {
+            const isCurrentPlayer = currentPlayer && player.id === currentPlayer.id;
+            const playerColor = Phaser.Display.Color.HexStringToColor(player.color).color;
+
+            for (const hero of player.heroes) {
+                const { x, y } = this.hexToPixel(hero.posX, hero.posY);
+
+                // Hero circle in player color
+                this.heroGraphics.fillStyle(playerColor, 1);
+                if (isCurrentPlayer) {
+                    this.heroGraphics.lineStyle(2, 0xffffff, 1);
+                } else {
+                    this.heroGraphics.lineStyle(1, playerColor, 0.8);
+                }
+                this.heroGraphics.fillCircle(x, y, HEX_SIZE * 0.6);
+                this.heroGraphics.strokeCircle(x, y, HEX_SIZE * 0.6);
+
+                // Hero letter: first letter of player name
+                const letter = player.name.charAt(0).toUpperCase();
+                const label = this.add.text(x, y, letter, {
+                    fontFamily: 'Arial',
+                    fontSize: '14px',
+                    color: '#000000',
+                    fontStyle: 'bold',
+                }).setOrigin(0.5);
+                this.mapContainer.add(label);
+                this.heroLabels.push(label);
+            }
+        }
     }
 
     private createUI(state: GameState): void {
@@ -222,12 +227,23 @@ export class AdventureMapScene extends Phaser.Scene {
         }
 
         // Day counter
-        this.dayText = this.add.text(width / 2, 20, this.getDayString(state), {
+        this.dayText = this.add.text(width / 2, 12, this.getDayString(state), {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: '16px',
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+
+        // Current player indicator
+        const playerColor = Phaser.Display.Color.HexStringToColor(player.color).color;
+        this.playerIndicatorRect = this.add.rectangle(width / 2 - 50, 38, 12, 12, playerColor)
+            .setDepth(101).setScrollFactor(0);
+
+        this.playerIndicator = this.add.text(width / 2 - 38, 38, player.name, {
+            fontFamily: 'serif',
+            fontSize: '14px',
+            color: player.color,
+        }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0);
 
         // Movement points
         this.movementText = this.add.text(width - 380, 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
@@ -304,15 +320,15 @@ export class AdventureMapScene extends Phaser.Scene {
     }
 
     private createLegend(): void {
-        const { height } = this.cameras.main;
+        const { width, height } = this.cameras.main;
         const entries = Object.entries(TERRAIN_COLORS);
         const padding = 8;
         const rowHeight = 18;
         const swatchSize = 10;
         const panelWidth = 100;
         const panelHeight = entries.length * rowHeight + padding * 2;
-        const panelX = 10;
-        const panelY = height - 50 - panelHeight - 10;
+        const panelX = width - panelWidth - 10;
+        const panelY = UI_HEIGHT + 10;
 
         this.add.rectangle(
             panelX + panelWidth / 2, panelY + panelHeight / 2,
@@ -397,20 +413,35 @@ export class AdventureMapScene extends Phaser.Scene {
             this.refreshDisplay();
 
             const currentState = gameStore.getState();
-            if (currentState?.status === 'won') {
-                this.showVictory();
+            if (currentState?.status === 'won' || currentState?.status === 'lost') {
+                this.showGameEnd();
                 return;
             }
 
             if (result.combat?.occurred && !result.combat.result.attackerWon) {
+                const updatedState = gameStore.getState();
+                if (updatedState?.status === 'won' || updatedState?.status === 'lost') {
+                    this.showGameEnd();
+                    return;
+                }
+                // Player eliminated but game continues — server already advanced the turn
                 const selectedHero = gameStore.getSelectedHero();
                 if (!selectedHero) {
-                    this.showGameOver();
+                    this.refreshDisplay();
+                    const nextPlayer = gameStore.getCurrentPlayer();
+                    if (nextPlayer) {
+                        this.showTurnTransition(nextPlayer.name, nextPlayer.color);
+                    }
                     return;
                 }
             }
         } catch (error: any) {
             console.warn('Move failed:', error.message);
+            const currentState = gameStore.getState();
+            if (currentState?.status === 'won' || currentState?.status === 'lost') {
+                this.showGameEnd();
+                return;
+            }
         } finally {
             this.isMoving = false;
         }
@@ -479,13 +510,49 @@ export class AdventureMapScene extends Phaser.Scene {
         const state = gameStore.getState();
         if (!state) return;
 
+        const oldPlayerIndex = state.currentPlayerIndex;
+
         try {
             const newState = await apiClient.endTurn(state.id);
             gameStore.updateFromGameState(newState);
             this.refreshDisplay();
+
+            if (newState.status === 'won' || newState.status === 'lost') {
+                this.showGameEnd();
+                return;
+            }
+
+            // Show turn transition overlay if player changed
+            if (newState.currentPlayerIndex !== oldPlayerIndex) {
+                const nextPlayer = newState.players[newState.currentPlayerIndex];
+                if (nextPlayer) {
+                    this.showTurnTransition(nextPlayer.name, nextPlayer.color);
+                }
+            }
         } catch (error) {
             console.error('End turn failed:', error);
         }
+    }
+
+    private showTurnTransition(playerName: string, playerColor: string): void {
+        this.isMoving = true;
+        const { width, height } = this.cameras.main;
+
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6)
+            .setDepth(300).setScrollFactor(0);
+
+        const text = this.add.text(width / 2, height / 2, `${playerName}'s Turn`, {
+            fontFamily: 'serif',
+            fontSize: '42px',
+            color: playerColor,
+            fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(301).setScrollFactor(0);
+
+        this.time.delayedCall(1500, () => {
+            overlay.destroy();
+            text.destroy();
+            this.isMoving = false;
+        });
     }
 
     private refreshDisplay(): void {
@@ -498,6 +565,14 @@ export class AdventureMapScene extends Phaser.Scene {
         // Update day text
         this.dayText.setText(this.getDayString(state));
 
+        // Update player indicator
+        if (player) {
+            const playerColor = Phaser.Display.Color.HexStringToColor(player.color).color;
+            this.playerIndicatorRect.setFillStyle(playerColor);
+            this.playerIndicator.setText(player.name);
+            this.playerIndicator.setColor(player.color);
+        }
+
         // Update resources
         for (const key of Object.keys(this.resourceTexts)) {
             this.resourceTexts[key].setText(String(player.resources[key as keyof typeof player.resources]));
@@ -506,11 +581,12 @@ export class AdventureMapScene extends Phaser.Scene {
         // Redraw neutral stacks
         this.drawNeutralStacks(state);
 
+        // Always redraw all heroes
+        this.drawHero(state);
+
         if (hero) {
             // Update movement points
             this.movementText.setText(`MP: ${hero.movementPoints}/${hero.maxMovementPoints}`);
-            // Redraw hero
-            this.drawHero(state);
             // Update army panel
             for (let i = 0; i < this.armyTexts.length; i++) {
                 if (i < hero.army.length) {
@@ -523,11 +599,6 @@ export class AdventureMapScene extends Phaser.Scene {
             }
         } else {
             this.movementText.setText('MP: --');
-            this.heroGraphics.clear();
-            if (this.heroLabel) {
-                this.heroLabel.destroy();
-                this.heroLabel = null;
-            }
             for (const txt of this.armyTexts) {
                 txt.setVisible(false);
             }
@@ -536,11 +607,16 @@ export class AdventureMapScene extends Phaser.Scene {
 
     private animateHeroPath(path: number[][]): Promise<void> {
         return new Promise((resolve) => {
-            // Remove old hero label
-            if (this.heroLabel) {
-                this.heroLabel.destroy();
-                this.heroLabel = null;
+            // Remove old hero labels
+            for (const label of this.heroLabels) {
+                label.destroy();
             }
+            this.heroLabels = [];
+
+            const player = gameStore.getCurrentPlayer();
+            const playerColor = player
+                ? Phaser.Display.Color.HexStringToColor(player.color).color
+                : 0xffcc00;
 
             let step = 1;
             const timer = this.time.addEvent({
@@ -556,7 +632,7 @@ export class AdventureMapScene extends Phaser.Scene {
                     const { x, y } = this.hexToPixel(col, row);
 
                     this.heroGraphics.clear();
-                    this.heroGraphics.fillStyle(0xffcc00, 1);
+                    this.heroGraphics.fillStyle(playerColor, 1);
                     this.heroGraphics.lineStyle(2, 0xffffff, 1);
                     this.heroGraphics.fillCircle(x, y, HEX_SIZE * 0.6);
                     this.heroGraphics.strokeCircle(x, y, HEX_SIZE * 0.6);
@@ -564,14 +640,15 @@ export class AdventureMapScene extends Phaser.Scene {
                     step++;
 
                     if (step >= path.length) {
-                        // Add label at final position
-                        this.heroLabel = this.add.text(x, y, 'H', {
+                        const letter = player ? player.name.charAt(0).toUpperCase() : 'H';
+                        const label = this.add.text(x, y, letter, {
                             fontFamily: 'Arial',
-                            fontSize: '16px',
+                            fontSize: '14px',
                             color: '#000000',
                             fontStyle: 'bold',
                         }).setOrigin(0.5);
-                        this.mapContainer.add(this.heroLabel);
+                        this.mapContainer.add(label);
+                        this.heroLabels.push(label);
                         timer.remove();
                         resolve();
                     }
@@ -657,74 +734,127 @@ export class AdventureMapScene extends Phaser.Scene {
         return `Month ${state.currentMonth}, Week ${state.currentWeek}, Day ${state.currentDay}`;
     }
 
-    private showGameOver(): void {
+    private showGameEnd(): void {
+        const state = gameStore.getState();
+        if (!state) return;
+
+        // Disable all input so the map is fully blocked
+        this.input.removeAllListeners();
+        this.isMoving = true;
+
         const { width, height } = this.cameras.main;
+        const isVictory = state.status === 'won';
 
-        // Full-screen dark overlay
-        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+        // Dark overlay — interactive to absorb stray clicks
+        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
             .setDepth(200)
-            .setScrollFactor(0);
+            .setScrollFactor(0)
+            .setInteractive();
 
-        // "Game Over" title
-        this.add.text(width / 2, height / 2 - 60, 'Game Over', {
+        // Title
+        this.add.text(width / 2, 60, isVictory ? 'Victory!' : 'Defeat', {
             fontFamily: 'serif',
             fontSize: '48px',
-            color: '#cc3333',
+            color: isVictory ? '#c4a44e' : '#cc3333',
             fontStyle: 'bold',
         }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
 
-        // Subtitle
-        this.add.text(width / 2, height / 2, 'Your hero has fallen.', {
+        // Subtitle: game duration
+        const duration = `Month ${state.currentMonth}, Week ${state.currentWeek}, Day ${state.currentDay}`;
+        this.add.text(width / 2, 110, duration, {
             fontFamily: 'serif',
-            fontSize: '20px',
-            color: '#ffffff',
+            fontSize: '18px',
+            color: '#aaaaaa',
         }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
 
-        // "New Game" button
-        const btnBg = this.add.rectangle(width / 2, height / 2 + 60, 160, 44, 0x2a2a4a)
+        // Sort players: alive first (by hero count desc), then eliminated
+        const sorted = [...state.players].sort((a, b) => {
+            const aAlive = a.heroes.length > 0 ? 1 : 0;
+            const bAlive = b.heroes.length > 0 ? 1 : 0;
+            if (aAlive !== bAlive) return bAlive - aAlive;
+            return b.heroes.length - a.heroes.length;
+        });
+
+        // Player list
+        const startY = 160;
+        const rowHeight = 36;
+
+        // Header
+        this.add.text(width / 2, startY - 10, 'Player Results', {
+            fontFamily: 'serif',
+            fontSize: '20px',
+            color: '#c4a44e',
+            fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        for (let i = 0; i < sorted.length; i++) {
+            const p = sorted[i];
+            const y = startY + 30 + i * rowHeight;
+            const alive = p.heroes.length > 0;
+            const playerColor = Phaser.Display.Color.HexStringToColor(p.color).color;
+
+            // Color swatch
+            this.add.rectangle(width / 2 - 180, y, 12, 12, playerColor)
+                .setDepth(201).setScrollFactor(0);
+
+            // Player name
+            this.add.text(width / 2 - 165, y, p.name, {
+                fontFamily: 'Arial',
+                fontSize: '15px',
+                color: p.color,
+                fontStyle: 'bold',
+            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
+
+            // Faction
+            this.add.text(width / 2 - 60, y, this.capitalize(p.faction), {
+                fontFamily: 'Arial',
+                fontSize: '13px',
+                color: '#aaaaaa',
+            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
+
+            // Status badge
+            let statusText: string;
+            let statusColor: string;
+            if (isVictory && alive) {
+                statusText = 'Winner';
+                statusColor = '#c4a44e';
+            } else if (alive) {
+                statusText = 'Alive';
+                statusColor = '#88cc88';
+            } else {
+                statusText = 'Eliminated';
+                statusColor = '#cc3333';
+            }
+
+            this.add.text(width / 2 + 40, y, statusText, {
+                fontFamily: 'Arial',
+                fontSize: '13px',
+                color: statusColor,
+                fontStyle: 'bold',
+            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
+
+            // Stats: total units across all heroes
+            const totalUnits = p.heroes.reduce((sum, h) =>
+                sum + h.army.reduce((s, slot) => s + slot.quantity, 0), 0);
+            const statsText = alive
+                ? `${p.resources.gold}g | ${p.heroes.length} hero(es) | ${totalUnits} units`
+                : '--';
+            this.add.text(width / 2 + 130, y, statsText, {
+                fontFamily: 'Arial',
+                fontSize: '13px',
+                color: alive ? '#ffffff' : '#666666',
+            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
+        }
+
+        // Main Menu button
+        const btnY = startY + 30 + sorted.length * rowHeight + 30;
+        const btnBg = this.add.rectangle(width / 2, btnY, 160, 44, 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true })
             .setDepth(201)
             .setScrollFactor(0);
 
-        this.add.text(width / 2, height / 2 + 60, 'New Game', {
-            fontFamily: 'serif',
-            fontSize: '20px',
-            color: '#c4a44e',
-        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
-
-        btnBg.on('pointerover', () => btnBg.setFillStyle(0x3a3a5a));
-        btnBg.on('pointerout', () => btnBg.setFillStyle(0x2a2a4a));
-        btnBg.on('pointerdown', () => this.scene.start('MainMenuScene'));
-    }
-
-    private showVictory(): void {
-        const { width, height } = this.cameras.main;
-
-        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
-            .setDepth(200)
-            .setScrollFactor(0);
-
-        this.add.text(width / 2, height / 2 - 60, 'Victory!', {
-            fontFamily: 'serif',
-            fontSize: '48px',
-            color: '#c4a44e',
-            fontStyle: 'bold',
-        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
-
-        this.add.text(width / 2, height / 2, 'All enemies have been defeated.', {
-            fontFamily: 'serif',
-            fontSize: '20px',
-            color: '#ffffff',
-        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
-
-        const btnBg = this.add.rectangle(width / 2, height / 2 + 60, 160, 44, 0x2a2a4a)
-            .setStrokeStyle(2, 0xc4a44e)
-            .setInteractive({ useHandCursor: true })
-            .setDepth(201)
-            .setScrollFactor(0);
-
-        this.add.text(width / 2, height / 2 + 60, 'New Game', {
+        this.add.text(width / 2, btnY, 'Main Menu', {
             fontFamily: 'serif',
             fontSize: '20px',
             color: '#c4a44e',

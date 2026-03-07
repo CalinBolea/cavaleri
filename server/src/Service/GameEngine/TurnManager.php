@@ -15,13 +15,44 @@ class TurnManager
     public function endTurn(Game $game): void
     {
         $players = $game->getPlayers()->toArray();
+        $playerCount = count($players);
         $currentIndex = $game->getCurrentPlayerIndex();
-        $nextIndex = ($currentIndex + 1) % count($players);
+        $nextIndex = ($currentIndex + 1) % $playerCount;
+
+        // Skip eliminated players (no heroes)
+        $checked = 0;
+        while ($checked < $playerCount) {
+            if (!$players[$nextIndex]->getHeroes()->isEmpty()) {
+                break;
+            }
+            $nextIndex = ($nextIndex + 1) % $playerCount;
+            $checked++;
+        }
+
+        // If all players are eliminated, game is lost
+        if ($checked >= $playerCount) {
+            $game->setStatus('lost');
+            $this->em->flush();
+            return;
+        }
+
+        // Check win: one player left and no neutrals
+        $activePlayers = 0;
+        foreach ($players as $p) {
+            if (!$p->getHeroes()->isEmpty()) {
+                $activePlayers++;
+            }
+        }
+        if ($activePlayers <= 1 && $game->getNeutralStacks()->isEmpty()) {
+            $game->setStatus('won');
+            $this->em->flush();
+            return;
+        }
 
         $game->setCurrentPlayerIndex($nextIndex);
 
-        // If we've gone through all players, advance the day
-        if ($nextIndex === 0) {
+        // If we've wrapped past index 0, advance the day
+        if ($nextIndex <= $currentIndex) {
             $this->advanceDay($game);
         }
 

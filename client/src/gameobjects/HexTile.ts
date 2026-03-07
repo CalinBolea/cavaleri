@@ -1,5 +1,5 @@
 // Hex tile utility - used for future click detection improvements
-export const HEX_SIZE = 24;
+export const HEX_SIZE = 20;
 export const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
 export const HEX_HEIGHT = 2 * HEX_SIZE;
 export const HEX_VERT_SPACING = HEX_HEIGHT * 0.75;

@@ -45,6 +45,7 @@ class Game
 
     /** @var Collection<int, Player> */
     #[ORM\OneToMany(targetEntity: Player::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['id' => 'ASC'])]
     private Collection $players;
 
     /** @var Collection<int, NeutralStack> */

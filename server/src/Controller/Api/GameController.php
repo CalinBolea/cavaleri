@@ -37,18 +37,45 @@ class GameController extends AbstractController
         return new JsonResponse(array_map(fn(Game $g) => $g->toSummaryArray(), $games));
     }
 
+    private const PLAYER_COLORS = ['#0066cc', '#cc3333', '#33aa33', '#cc9900'];
+
+    private const FACTION_STARTING_ARMY = [
+        'castle' => [
+            ['unitId' => 'pikeman', 'min' => 10, 'max' => 5000],
+            ['unitId' => 'archer', 'min' => 10, 'max' => 5000],
+        ],
+        'necropolis' => [
+            ['unitId' => 'skeleton', 'min' => 10, 'max' => 50],
+            ['unitId' => 'walking_dead', 'min' => 10, 'max' => 50],
+        ],
+    ];
+
+    private const FACTION_HERO_NAMES = [
+        'castle' => 'Lord Haart',
+        'necropolis' => 'Lord Haart',
+    ];
+
     #[Route('/games', name: 'api_games_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true) ?? [];
-        $playerName = $data['playerName'] ?? 'Player 1';
-        $faction = $data['faction'] ?? 'castle';
+
+        // Support new players array or legacy single-player format
+        $playersData = $data['players'] ?? [
+            ['name' => $data['playerName'] ?? 'Player 1', 'faction' => $data['faction'] ?? 'castle'],
+        ];
+
+        $playerCount = min(count($playersData), 4);
+        $playersData = array_slice($playersData, 0, $playerCount);
 
         $mapWidth = 20;
         $mapHeight = 20;
 
+        // Select starting positions for the number of players
+        $startPositions = array_slice(MapGenerator::START_POSITIONS, 0, $playerCount);
+
         // Generate map
-        $mapData = $this->mapGenerator->generate($mapWidth, $mapHeight);
+        $mapData = $this->mapGenerator->generate($mapWidth, $mapHeight, $startPositions);
 
         // Create game
         $game = new Game();
@@ -57,45 +84,45 @@ class GameController extends AbstractController
         $game->setMapData($mapData);
         $game->setStatus('in_progress');
 
-        // Create player
-        $player = new Player();
-        $player->setName($playerName);
-        $player->setFaction($faction);
-        $player->setColor('#0066cc');
-        $player->setResources([
-            'gold' => 2500,
-            'wood' => 10,
-            'ore' => 10,
-            'mercury' => 0,
-            'sulfur' => 0,
-            'crystal' => 0,
-            'gems' => 0,
-        ]);
-        $game->addPlayer($player);
+        // Create players
+        foreach ($playersData as $i => $pd) {
+            $faction = $pd['faction'] ?? 'castle';
+            $player = new Player();
+            $player->setName($pd['name'] ?? 'Player ' . ($i + 1));
+            $player->setFaction($faction);
+            $player->setColor(self::PLAYER_COLORS[$i] ?? '#0066cc');
+            $player->setResources([
+                'gold' => 2500,
+                'wood' => 10,
+                'ore' => 10,
+                'mercury' => 0,
+                'sulfur' => 0,
+                'crystal' => 0,
+                'gems' => 0,
+            ]);
+            $game->addPlayer($player);
 
-        // Create hero with starting army
-        $hero = new Hero();
-        $hero->setName('Lord Haart');
-        $hero->setHeroClass('knight');
-        $hero->setPosX(3);
-        $hero->setPosY(3);
+            // Create hero with faction-appropriate starting army
+            $hero = new Hero();
+            $hero->setName(self::FACTION_HERO_NAMES[$faction] ?? 'Lord Haart');
+            $hero->setHeroClass('knight');
+            $hero->setPosX($startPositions[$i][0]);
+            $hero->setPosY($startPositions[$i][1]);
 
-        $slot1 = new ArmySlot();
-        $slot1->setSlotIndex(0);
-        $slot1->setUnitId('pikeman');
-        $slot1->setQuantity(random_int(10, 50));
-        $hero->addArmySlot($slot1);
+            $armyConfig = self::FACTION_STARTING_ARMY[$faction] ?? self::FACTION_STARTING_ARMY['castle'];
+            foreach ($armyConfig as $slotIdx => $unitCfg) {
+                $slot = new ArmySlot();
+                $slot->setSlotIndex($slotIdx);
+                $slot->setUnitId($unitCfg['unitId']);
+                $slot->setQuantity(random_int($unitCfg['min'], $unitCfg['max']));
+                $hero->addArmySlot($slot);
+            }
 
-        $slot2 = new ArmySlot();
-        $slot2->setSlotIndex(1);
-        $slot2->setUnitId('archer');
-        $slot2->setQuantity(random_int(10, 50));
-        $hero->addArmySlot($slot2);
-
-        $player->addHero($hero);
+            $player->addHero($hero);
+        }
 
         // Generate neutral stacks
-        $neutralStackData = $this->mapGenerator->generateNeutralStacks($mapData);
+        $neutralStackData = $this->mapGenerator->generateNeutralStacks($mapData, 8, $startPositions);
         foreach ($neutralStackData as $stackData) {
             $neutralStack = new NeutralStack();
             $neutralStack->setPosX($stackData['posX']);

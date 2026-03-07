@@ -30,6 +30,7 @@ export interface PlayerData {
     id: string;
     name: string;
     faction: string;
+    color: string;
     resources: Resources;
     heroes: HeroData[];
 }
@@ -70,6 +71,7 @@ export interface GameState {
     currentDay: number;
     currentWeek: number;
     currentMonth: number;
+    currentPlayerIndex: number;
     mapWidth: number;
     mapHeight: number;
     mapData: string[][];
@@ -90,7 +92,7 @@ class GameStore {
 
     getCurrentPlayer(): PlayerData | null {
         if (!this.state) return null;
-        return this.state.players[0]; // single player: always first player
+        return this.state.players[this.state.currentPlayerIndex] ?? null;
     }
 
     getSelectedHero(): HeroData | null {

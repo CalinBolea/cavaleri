@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
-import { apiClient, GameSummary } from '../network/ApiClient';
+import { apiClient, GameSummary, PlayerConfig } from '../network/ApiClient';
 import { gameStore } from '../state/GameStore';
 
 export class MainMenuScene extends Phaser.Scene {
     private mainButtons: Phaser.GameObjects.GameObject[] = [];
     private listContainer: Phaser.GameObjects.Container | null = null;
+    private setupContainer: Phaser.GameObjects.Container | null = null;
 
     constructor() {
         super({ key: 'MainMenuScene' });
@@ -46,20 +47,7 @@ export class MainMenuScene extends Phaser.Scene {
 
         newGameBg.on('pointerover', () => newGameBg.setFillStyle(0x3a3a5a));
         newGameBg.on('pointerout', () => newGameBg.setFillStyle(0x2a2a4a));
-        newGameBg.on('pointerdown', async () => {
-            newGameText.setText('Creating...');
-            newGameBg.disableInteractive();
-
-            try {
-                const gameState = await apiClient.createGame('Player 1', 'castle');
-                gameStore.setState(gameState);
-                this.scene.start('AdventureMapScene');
-            } catch (error) {
-                console.error('Failed to create game:', error);
-                newGameText.setText('Error! Retry');
-                newGameBg.setInteractive({ useHandCursor: true });
-            }
-        });
+        newGameBg.on('pointerdown', () => this.showNewGamePanel());
 
         // Load Game button
         const loadGameBg = this.add.rectangle(width / 2, height / 2 + 130, 240, 56, 0x2a2a4a)
@@ -97,6 +85,172 @@ export class MainMenuScene extends Phaser.Scene {
             obj.destroy();
         }
         this.mainButtons = [];
+    }
+
+    private showNewGamePanel(): void {
+        this.destroyMainButtons();
+
+        const { width, height } = this.cameras.main;
+        this.setupContainer = this.add.container(0, 0);
+
+        const panelW = 500;
+        const panelH = 400;
+        const panelX = width / 2;
+        const panelY = height / 2;
+
+        const panelBg = this.add.rectangle(panelX, panelY, panelW, panelH, 0x1a1a2e)
+            .setStrokeStyle(2, 0xc4a44e);
+        this.setupContainer.add(panelBg);
+
+        const title = this.add.text(panelX, panelY - panelH / 2 + 30, 'New Game', {
+            fontFamily: 'serif',
+            fontSize: '28px',
+            color: '#c4a44e',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+        this.setupContainer.add(title);
+
+        const factions = ['castle', 'necropolis'];
+        let playerCount = 2;
+        const playerFactions: string[] = ['castle', 'necropolis', 'castle', 'necropolis'];
+
+        // Player count selector
+        const countLabelY = panelY - panelH / 2 + 80;
+        const countLabel = this.add.text(panelX - 100, countLabelY, 'Players:', {
+            fontFamily: 'serif',
+            fontSize: '20px',
+            color: '#ffffff',
+        }).setOrigin(0, 0.5);
+        this.setupContainer.add(countLabel);
+
+        const countButtons: Phaser.GameObjects.Rectangle[] = [];
+        const countTexts: Phaser.GameObjects.Text[] = [];
+
+        for (let n = 1; n <= 4; n++) {
+            const bx = panelX + 20 + (n - 1) * 50;
+            const bg = this.add.rectangle(bx, countLabelY, 40, 36, n === playerCount ? 0xc4a44e : 0x2a2a4a)
+                .setStrokeStyle(1, 0xc4a44e)
+                .setInteractive({ useHandCursor: true });
+            const txt = this.add.text(bx, countLabelY, String(n), {
+                fontFamily: 'serif',
+                fontSize: '18px',
+                color: n === playerCount ? '#000000' : '#c4a44e',
+            }).setOrigin(0.5);
+            this.setupContainer.add(bg);
+            this.setupContainer.add(txt);
+            countButtons.push(bg);
+            countTexts.push(txt);
+
+            bg.on('pointerdown', () => {
+                playerCount = n;
+                for (let j = 0; j < 4; j++) {
+                    const selected = j + 1 === playerCount;
+                    countButtons[j].setFillStyle(selected ? 0xc4a44e : 0x2a2a4a);
+                    countTexts[j].setColor(selected ? '#000000' : '#c4a44e');
+                }
+                rebuildPlayerRows();
+            });
+        }
+
+        // Player rows container
+        const rowsContainer = this.add.container(0, 0);
+        this.setupContainer.add(rowsContainer);
+
+        const rebuildPlayerRows = () => {
+            rowsContainer.removeAll(true);
+
+            for (let i = 0; i < playerCount; i++) {
+                const rowY = panelY - panelH / 2 + 130 + i * 50;
+
+                const nameText = this.add.text(panelX - 180, rowY, `Player ${i + 1}`, {
+                    fontFamily: 'serif',
+                    fontSize: '18px',
+                    color: '#ffffff',
+                }).setOrigin(0, 0.5);
+                rowsContainer.add(nameText);
+
+                const factionBg = this.add.rectangle(panelX + 80, rowY, 160, 36, 0x2a2a4a)
+                    .setStrokeStyle(1, 0xc4a44e)
+                    .setInteractive({ useHandCursor: true });
+                rowsContainer.add(factionBg);
+
+                const factionText = this.add.text(panelX + 80, rowY, this.capitalize(playerFactions[i]), {
+                    fontFamily: 'serif',
+                    fontSize: '16px',
+                    color: '#c4a44e',
+                }).setOrigin(0.5);
+                rowsContainer.add(factionText);
+
+                const idx = i;
+                factionBg.on('pointerover', () => factionBg.setFillStyle(0x3a3a5a));
+                factionBg.on('pointerout', () => factionBg.setFillStyle(0x2a2a4a));
+                factionBg.on('pointerdown', () => {
+                    const currentIdx = factions.indexOf(playerFactions[idx]);
+                    playerFactions[idx] = factions[(currentIdx + 1) % factions.length];
+                    factionText.setText(this.capitalize(playerFactions[idx]));
+                });
+            }
+        };
+
+        rebuildPlayerRows();
+
+        // Start button
+        const startY = panelY + panelH / 2 - 70;
+        const startBg = this.add.rectangle(panelX, startY, 160, 44, 0x2a2a4a)
+            .setStrokeStyle(2, 0xc4a44e)
+            .setInteractive({ useHandCursor: true });
+        this.setupContainer.add(startBg);
+
+        const startText = this.add.text(panelX, startY, 'Start', {
+            fontFamily: 'serif',
+            fontSize: '22px',
+            color: '#c4a44e',
+        }).setOrigin(0.5);
+        this.setupContainer.add(startText);
+
+        startBg.on('pointerover', () => startBg.setFillStyle(0x3a3a5a));
+        startBg.on('pointerout', () => startBg.setFillStyle(0x2a2a4a));
+        startBg.on('pointerdown', async () => {
+            startText.setText('Creating...');
+            startBg.disableInteractive();
+
+            const players: PlayerConfig[] = [];
+            for (let i = 0; i < playerCount; i++) {
+                players.push({ name: `Player ${i + 1}`, faction: playerFactions[i] });
+            }
+
+            try {
+                const gameState = await apiClient.createGame(players);
+                gameStore.setState(gameState);
+                this.scene.start('AdventureMapScene');
+            } catch (error) {
+                console.error('Failed to create game:', error);
+                startText.setText('Error! Retry');
+                startBg.setInteractive({ useHandCursor: true });
+            }
+        });
+
+        // Back button
+        const backY = panelY + panelH / 2 - 30;
+        const backBg = this.add.rectangle(panelX, backY, 120, 40, 0x2a2a4a)
+            .setStrokeStyle(2, 0xc4a44e)
+            .setInteractive({ useHandCursor: true });
+        this.setupContainer.add(backBg);
+
+        const backText = this.add.text(panelX, backY, 'Back', {
+            fontFamily: 'serif',
+            fontSize: '18px',
+            color: '#c4a44e',
+        }).setOrigin(0.5);
+        this.setupContainer.add(backText);
+
+        backBg.on('pointerover', () => backBg.setFillStyle(0x3a3a5a));
+        backBg.on('pointerout', () => backBg.setFillStyle(0x2a2a4a));
+        backBg.on('pointerdown', () => {
+            this.setupContainer?.destroy();
+            this.setupContainer = null;
+            this.showMainButtons();
+        });
     }
 
     private async showLoadGamePanel(): Promise<void> {

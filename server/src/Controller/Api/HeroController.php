@@ -2,10 +2,12 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\Game;
 use App\Repository\GameRepository;
 use App\Repository\HeroRepository;
 use App\Repository\NeutralStackRepository;
 use App\Service\GameEngine\CombatService;
+use App\Service\GameEngine\TurnManager;
 use App\Service\Map\PathfindingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,6 +26,7 @@ class HeroController extends AbstractController
         private PathfindingService $pathfindingService,
         private NeutralStackRepository $neutralStackRepository,
         private CombatService $combatService,
+        private TurnManager $turnManager,
     ) {
     }
 
@@ -42,6 +45,13 @@ class HeroController extends AbstractController
         $hero = $this->heroRepository->find($heroId);
         if (!$hero || !$hero->getPlayer()->getGame()->getId()->equals($game->getId())) {
             return new JsonResponse(['error' => 'Hero not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Validate hero belongs to the current player
+        $players = $game->getPlayers()->toArray();
+        $currentPlayer = $players[$game->getCurrentPlayerIndex()] ?? null;
+        if (!$currentPlayer || !$hero->getPlayer()->getId()->equals($currentPlayer->getId())) {
+            return new JsonResponse(['error' => 'Not your turn'], Response::HTTP_FORBIDDEN);
         }
 
         $data = json_decode($request->getContent(), true) ?? [];
@@ -111,9 +121,7 @@ class HeroController extends AbstractController
                 $this->em->remove($neutralStack);
 
                 // Check win condition
-                if ($game->getNeutralStacks()->isEmpty()) {
-                    $game->setStatus('won');
-                }
+                $this->checkWinCondition($game);
 
                 // Apply attacker losses
                 foreach ($result->attackerLosses as $loss) {
@@ -163,8 +171,14 @@ class HeroController extends AbstractController
                 }
 
                 if ($armyEmpty) {
-                    $hero->getPlayer()->removeHero($hero);
+                    $player = $hero->getPlayer();
+                    $player->removeHero($hero);
                     $this->em->remove($hero);
+
+                    // Auto-advance turn if this player has no heroes left
+                    if ($player->getHeroes()->isEmpty()) {
+                        $this->turnManager->endTurn($game);
+                    }
                 }
             }
 
@@ -211,20 +225,6 @@ class HeroController extends AbstractController
                             $otherPlayer->removeHero($enemyHero);
                             $this->em->remove($enemyHero);
 
-                            // Check win condition
-                            $allEnemiesDefeated = $game->getNeutralStacks()->isEmpty();
-                            if ($allEnemiesDefeated) {
-                                foreach ($game->getPlayers() as $p) {
-                                    if (!$p->getId()->equals($hero->getPlayer()->getId()) && !$p->getHeroes()->isEmpty()) {
-                                        $allEnemiesDefeated = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            if ($allEnemiesDefeated) {
-                                $game->setStatus('won');
-                            }
-
                             foreach ($result->attackerLosses as $loss) {
                                 foreach ($hero->getArmySlots() as $slot) {
                                     if ($slot->getSlotIndex() === $loss['slotIndex']) {
@@ -240,6 +240,8 @@ class HeroController extends AbstractController
                             }
 
                             $hero->setExperience($hero->getExperience() + $result->experienceGained);
+
+                            $this->checkWinCondition($game);
                         } else {
                             if (count($path) >= 2) {
                                 $prevStep = $path[count($path) - 2];
@@ -267,8 +269,14 @@ class HeroController extends AbstractController
                             }
 
                             if ($armyEmpty) {
-                                $hero->getPlayer()->removeHero($hero);
+                                $player = $hero->getPlayer();
+                                $player->removeHero($hero);
                                 $this->em->remove($hero);
+
+                                // Auto-advance turn if this player has no heroes left
+                                if ($player->getHeroes()->isEmpty()) {
+                                    $this->turnManager->endTurn($game);
+                                }
                             }
                         }
 
@@ -292,5 +300,18 @@ class HeroController extends AbstractController
             'combat' => $combatData,
             'game' => $game->toArray(),
         ]);
+    }
+
+    private function checkWinCondition(Game $game): void
+    {
+        $playersWithHeroes = 0;
+        foreach ($game->getPlayers() as $p) {
+            if (!$p->getHeroes()->isEmpty()) {
+                $playersWithHeroes++;
+            }
+        }
+        if ($playersWithHeroes <= 1 && $game->getNeutralStacks()->isEmpty()) {
+            $game->setStatus('won');
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Tests\Service\GameEngine;
 
 use App\Entity\Game;
 use App\Entity\Hero;
+use App\Entity\NeutralStack;
 use App\Entity\Player;
 use App\Service\GameEngine\TurnManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -77,6 +78,87 @@ class TurnManagerTest extends TestCase
         $this->assertEquals(2, $game->getCurrentMonth());
     }
 
+    public function testLastPlayerStandingWithNoNeutralsWins(): void
+    {
+        $game = $this->createTwoPlayerGame();
+
+        // Remove P2's hero
+        $player2 = $game->getPlayers()->toArray()[1];
+        $hero2 = $player2->getHeroes()->first();
+        $player2->removeHero($hero2);
+
+        $this->turnManager->endTurn($game);
+
+        $this->assertEquals('won', $game->getStatus());
+    }
+
+    public function testLastPlayerStandingWithNeutralsDoesNotWin(): void
+    {
+        $game = $this->createTwoPlayerGame();
+
+        // Add a neutral stack
+        $neutral = new NeutralStack();
+        $neutral->setPosX(5);
+        $neutral->setPosY(5);
+        $neutral->setFactionId('neutral');
+        $neutral->setUnitId('skeleton');
+        $neutral->setQuantity(10);
+        $game->addNeutralStack($neutral);
+
+        // Remove P2's hero
+        $player2 = $game->getPlayers()->toArray()[1];
+        $hero2 = $player2->getHeroes()->first();
+        $player2->removeHero($hero2);
+
+        $this->turnManager->endTurn($game);
+
+        $this->assertEquals('in_progress', $game->getStatus());
+    }
+
+    public function testAllPlayersEliminatedLoses(): void
+    {
+        $game = $this->createTwoPlayerGame();
+
+        // Remove all heroes
+        foreach ($game->getPlayers() as $player) {
+            foreach ($player->getHeroes()->toArray() as $hero) {
+                $player->removeHero($hero);
+            }
+        }
+
+        $this->turnManager->endTurn($game);
+
+        $this->assertEquals('lost', $game->getStatus());
+    }
+
+    private function createTwoPlayerGame(): Game
+    {
+        $game = new Game();
+        $game->setMapWidth(20);
+        $game->setMapHeight(20);
+        $game->setMapData([]);
+        $game->setStatus('in_progress');
+
+        for ($i = 0; $i < 2; $i++) {
+            $player = new Player();
+            $player->setName("Player $i");
+            $player->setFaction('castle');
+            $player->setResources(['gold' => 2500, 'wood' => 10, 'ore' => 10, 'mercury' => 0, 'sulfur' => 0, 'crystal' => 0, 'gems' => 0]);
+
+            $hero = new Hero();
+            $hero->setName("Hero $i");
+            $hero->setPosX($i * 5);
+            $hero->setPosY($i * 5);
+            $hero->setMovementPoints(20);
+            $hero->setMaxMovementPoints(20);
+            $player->addHero($hero);
+
+            $game->addPlayer($player);
+        }
+
+        return $game;
+    }
+
     private function createGame(): Game
     {
         $game = new Game();
@@ -99,6 +181,15 @@ class TurnManagerTest extends TestCase
         $player->addHero($hero);
 
         $game->addPlayer($player);
+
+        // Add a neutral stack so the win condition doesn't trigger
+        $neutral = new NeutralStack();
+        $neutral->setPosX(10);
+        $neutral->setPosY(10);
+        $neutral->setFactionId('neutral');
+        $neutral->setUnitId('skeleton');
+        $neutral->setQuantity(5);
+        $game->addNeutralStack($neutral);
 
         return $game;
     }
