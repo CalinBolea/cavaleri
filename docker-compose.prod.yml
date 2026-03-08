@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  nginx:
+    build:
+      context: ./docker/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./server:/var/www/server:cached
+      - ./client/dist:/var/www/client/dist:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - php
+    environment:
+      - NGINX_HOST=yourdomain.com
+    restart: always
+
+  php:
+    build:
+      context: ./docker/php
+    volumes:
+      - ./server:/var/www/server:cached
+      - ./shared:/var/www/shared:cached
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://cavaleri:${POSTGRES_PASSWORD}@postgres:5432/cavaleri?serverVersion=16&charset=utf8"
+      MERCURE_URL: "http://mercure/.well-known/mercure"
+      MERCURE_PUBLIC_URL: "https://yourdomain.com/.well-known/mercure"
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_SECRET}"
+      APP_ENV: prod
+      APP_SECRET: "${APP_SECRET}"
+      CORS_ALLOW_ORIGIN: "^https?://(yourdomain\\.com|www\\.yourdomain\\.com)$"
+    restart: always
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cavaleri
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: cavaleri
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cavaleri"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  node:
+    build:
+      context: ./docker/node
+    working_dir: /var/www/client
+    command: sh -c "npm install && npm run build"
+    volumes:
+      - ./client:/var/www/client:cached
+      - ./shared:/var/www/shared:cached
+      - node_modules:/var/www/client/node_modules
+    environment:
+      - NODE_ENV=production
+    restart: on-failure
+
+  mercure:
+    image: dunglas/mercure
+    environment:
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_SECRET}"
+      MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_SECRET}"
+      MERCURE_EXTRA_DIRECTIVES: |
+        cors_origins https://yourdomain.com
+        anonymous
+    restart: always
+
+volumes:
+  pgdata:
+  node_modules:
+
