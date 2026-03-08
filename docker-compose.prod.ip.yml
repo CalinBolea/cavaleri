@@ -1,0 +1,77 @@
+services:
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile.ip
+    ports:
+      - "8080:80"
+    volumes:
+      - ./server:/var/www/server:cached
+      - ./client/dist:/var/www/client/dist:ro
+    depends_on:
+      - php
+    restart: always
+
+  php:
+    build:
+      context: ./docker/php
+    volumes:
+      - ./server:/var/www/server:cached
+      - ./shared:/var/www/shared:cached
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://cavaleri:${POSTGRES_PASSWORD:-cavaleri}@postgres:5432/cavaleri?serverVersion=16&charset=utf8"
+      MERCURE_URL: "http://mercure/.well-known/mercure"
+      MERCURE_PUBLIC_URL: "http://YOUR_VPS_IP:3000/.well-known/mercure"
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_SECRET:-cavaleri_mercure_secret_key_change_in_prod}"
+      APP_ENV: prod
+      APP_SECRET: "${APP_SECRET:-change_me_in_production}"
+      CORS_ALLOW_ORIGIN: "^https?://.*$"
+    restart: always
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cavaleri
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cavaleri}
+      POSTGRES_DB: cavaleri
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cavaleri"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  node:
+    build:
+      context: ./docker/node
+    working_dir: /var/www/client
+    command: sh -c "npm install && npm run build"
+    volumes:
+      - ./client:/var/www/client:cached
+      - ./shared:/var/www/shared:cached
+      - node_modules:/var/www/client/node_modules
+    environment:
+      - NODE_ENV=production
+    restart: on-failure
+
+  mercure:
+    image: dunglas/mercure
+    ports:
+      - "3000:80"
+    environment:
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_SECRET:-cavaleri_mercure_secret_key_change_in_prod}"
+      MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_SECRET:-cavaleri_mercure_secret_key_change_in_prod}"
+      MERCURE_EXTRA_DIRECTIVES: |
+        cors_origins *
+        anonymous
+    restart: always
+
+volumes:
+  pgdata:
+  node_modules:
