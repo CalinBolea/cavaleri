@@ -3,7 +3,7 @@ services:
     build:
       context: ./docker/nginx
     ports:
-      - "8080:80"
+      - "8081:80"
     volumes:
       - ./server:/var/www/server:cached
     depends_on:
