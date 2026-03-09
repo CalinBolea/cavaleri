@@ -114,6 +114,9 @@ export class CombatResultDialog {
                 this.resolvePromise();
             }
         });
+
+        // Ignore on main camera so zoom doesn't affect the dialog
+        this.scene.cameras.main.ignore(this.container);
     }
 
     waitForDismissal(): Promise<void> {

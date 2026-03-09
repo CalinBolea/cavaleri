@@ -4,7 +4,19 @@ namespace App\Service\Map;
 
 class MapGenerator
 {
+    public const MAP_SIZES = [
+        'S' => ['width' => 20, 'height' => 20, 'startPositions' => [[3, 3], [16, 16], [16, 3], [3, 16]], 'neutralStackCount' => 8],
+        'M' => ['width' => 36, 'height' => 36, 'startPositions' => [[3, 3], [32, 32], [32, 3], [3, 32]], 'neutralStackCount' => 16],
+        'L' => ['width' => 52, 'height' => 52, 'startPositions' => [[3, 3], [48, 48], [48, 3], [3, 48]], 'neutralStackCount' => 28],
+    ];
+
+    /** @deprecated Use MAP_SIZES['S']['startPositions'] instead */
     public const START_POSITIONS = [[3, 3], [16, 16], [16, 3], [3, 16]];
+
+    public static function getMapConfig(string $size): array
+    {
+        return self::MAP_SIZES[$size] ?? throw new \InvalidArgumentException("Unknown map size: $size");
+    }
 
     private const TERRAIN_WEIGHTS = [
         'grass' => 50,

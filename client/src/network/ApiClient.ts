@@ -21,17 +21,19 @@ export interface GameSummary {
     currentDay: number;
     currentWeek: number;
     currentMonth: number;
+    mapWidth: number;
+    mapHeight: number;
     players: { name: string; faction: string }[];
     createdAt: string;
     updatedAt: string;
 }
 
 class ApiClient {
-    async createGame(players: PlayerConfig[]): Promise<GameState> {
+    async createGame(players: PlayerConfig[], mapSize: string = 'S'): Promise<GameState> {
         const response = await fetch(`${API_BASE}/games`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ players }),
+            body: JSON.stringify({ players, mapSize }),
         });
 
         if (!response.ok) {

@@ -95,7 +95,7 @@ export class MainMenuScene extends Phaser.Scene {
         this.setupContainer = this.add.container(0, 0);
 
         const panelW = 500;
-        const panelH = 400;
+        const panelH = 450;
         const panelX = width / 2;
         const panelY = height / 2;
 
@@ -114,6 +114,9 @@ export class MainMenuScene extends Phaser.Scene {
         const factions = ['castle', 'necropolis'];
         let playerCount = 2;
         const playerFactions: string[] = ['castle', 'necropolis', 'castle', 'necropolis'];
+        const mapSizes = ['S', 'M', 'L'];
+        const mapSizeLabels: Record<string, string> = { S: 'Small', M: 'Medium', L: 'Large' };
+        let selectedMapSize = 'S';
 
         // Player count selector
         const countLabelY = panelY - panelH / 2 + 80;
@@ -153,6 +156,44 @@ export class MainMenuScene extends Phaser.Scene {
             });
         }
 
+        // Map size selector
+        const sizeLabelY = panelY - panelH / 2 + 120;
+        const sizeLabel = this.add.text(panelX - 100, sizeLabelY, 'Map Size:', {
+            fontFamily: 'serif',
+            fontSize: '20px',
+            color: '#ffffff',
+        }).setOrigin(0, 0.5);
+        this.setupContainer.add(sizeLabel);
+
+        const sizeButtons: Phaser.GameObjects.Rectangle[] = [];
+        const sizeTexts: Phaser.GameObjects.Text[] = [];
+
+        for (let s = 0; s < mapSizes.length; s++) {
+            const size = mapSizes[s];
+            const bx = panelX + 20 + s * 60;
+            const bg = this.add.rectangle(bx, sizeLabelY, 50, 36, size === selectedMapSize ? 0xc4a44e : 0x2a2a4a)
+                .setStrokeStyle(1, 0xc4a44e)
+                .setInteractive({ useHandCursor: true });
+            const txt = this.add.text(bx, sizeLabelY, mapSizeLabels[size], {
+                fontFamily: 'serif',
+                fontSize: '14px',
+                color: size === selectedMapSize ? '#000000' : '#c4a44e',
+            }).setOrigin(0.5);
+            this.setupContainer.add(bg);
+            this.setupContainer.add(txt);
+            sizeButtons.push(bg);
+            sizeTexts.push(txt);
+
+            bg.on('pointerdown', () => {
+                selectedMapSize = size;
+                for (let j = 0; j < mapSizes.length; j++) {
+                    const sel = mapSizes[j] === selectedMapSize;
+                    sizeButtons[j].setFillStyle(sel ? 0xc4a44e : 0x2a2a4a);
+                    sizeTexts[j].setColor(sel ? '#000000' : '#c4a44e');
+                }
+            });
+        }
+
         // Player rows container
         const rowsContainer = this.add.container(0, 0);
         this.setupContainer.add(rowsContainer);
@@ -161,7 +202,7 @@ export class MainMenuScene extends Phaser.Scene {
             rowsContainer.removeAll(true);
 
             for (let i = 0; i < playerCount; i++) {
-                const rowY = panelY - panelH / 2 + 130 + i * 50;
+                const rowY = panelY - panelH / 2 + 170 + i * 50;
 
                 const nameText = this.add.text(panelX - 180, rowY, `Player ${i + 1}`, {
                     fontFamily: 'serif',
@@ -221,7 +262,7 @@ export class MainMenuScene extends Phaser.Scene {
             }
 
             try {
-                const gameState = await apiClient.createGame(players);
+                const gameState = await apiClient.createGame(players, selectedMapSize);
                 gameStore.setState(gameState);
                 this.scene.start('AdventureMapScene');
             } catch (error) {
@@ -348,6 +389,15 @@ export class MainMenuScene extends Phaser.Scene {
                     color: '#ffffff',
                 }).setOrigin(0, 0.5);
                 this.listContainer.add(leftText);
+
+                // Map size label
+                const sizeLabel = game.mapWidth <= 20 ? 'Small' : game.mapWidth <= 36 ? 'Medium' : 'Large';
+                const sizeText = this.add.text(leftText.x + leftText.width + 12, rowY, sizeLabel, {
+                    fontFamily: 'serif',
+                    fontSize: '14px',
+                    color: '#888899',
+                }).setOrigin(0, 0.5);
+                this.listContainer.add(sizeText);
 
                 // Delete button
                 const delBtnX = panelX + rowW / 2 - 20;

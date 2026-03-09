@@ -19,6 +19,9 @@ const TERRAIN_COLORS: Record<string, number> = {
 
 const UI_HEIGHT = 60;
 
+const ZOOM_LEVELS = [0.6, 1.0, 1.5];
+const DEFAULT_ZOOM_INDEX = 1;
+
 export class AdventureMapScene extends Phaser.Scene {
     private hexGraphics!: Phaser.GameObjects.Graphics;
     private heroGraphics!: Phaser.GameObjects.Graphics;
@@ -37,6 +40,14 @@ export class AdventureMapScene extends Phaser.Scene {
     private pathCostText: Phaser.GameObjects.Text | null = null;
     private playerIndicator!: Phaser.GameObjects.Text;
     private playerIndicatorRect!: Phaser.GameObjects.Rectangle;
+    private uiCamera!: Phaser.Cameras.Scene2D.Camera;
+    private uiElements: Phaser.GameObjects.GameObject[] = [];
+    private zoomIndex: number = DEFAULT_ZOOM_INDEX;
+    private isDragging = false;
+    private dragStartX = 0;
+    private dragStartY = 0;
+    private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+    private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
 
     constructor() {
         super({ key: 'AdventureMapScene' });
@@ -51,10 +62,21 @@ export class AdventureMapScene extends Phaser.Scene {
 
         this.heroLabels = [];
 
-        // Create map container, centered horizontally
+        // Create map container
         const mapPixelWidth = state.mapWidth * HEX_WIDTH + HEX_WIDTH / 2;
-        const mapOffsetX = Math.max(0, (this.cameras.main.width - mapPixelWidth) / 2);
-        this.mapContainer = this.add.container(mapOffsetX, UI_HEIGHT);
+        const mapPixelHeight = state.mapHeight * HEX_VERT_SPACING + HEX_HEIGHT / 2;
+        const bottomPanelHeight = 50;
+        const totalWidth = Math.max(this.cameras.main.width, mapPixelWidth);
+        const totalHeight = mapPixelHeight + UI_HEIGHT + bottomPanelHeight;
+        this.cameras.main.setBounds(0, 0, totalWidth, totalHeight);
+
+        // Create UI camera (no zoom, no scroll)
+        const { width: camW, height: camH } = this.cameras.main;
+        this.uiCamera = this.cameras.add(0, 0, camW, camH);
+        this.uiCamera.setScroll(0, 0);
+        this.uiElements = [];
+
+        this.mapContainer = this.add.container(0, UI_HEIGHT);
 
         // Create hex graphics within container
         this.hexGraphics = this.add.graphics();
@@ -80,25 +102,96 @@ export class AdventureMapScene extends Phaser.Scene {
         this.createUI(state);
         this.createLegend();
 
-        // Input: click to move
+        // Camera isolation: UI on uiCamera only, map on main camera only
+        for (const obj of this.uiElements) {
+            this.cameras.main.ignore(obj);
+        }
+        this.uiCamera.ignore(this.mapContainer);
+
+        // Disable right-click context menu
+        this.input.mouse?.disableContextMenu();
+
+        // Keyboard setup
+        this.cursors = this.input.keyboard!.createCursorKeys();
+        this.wasd = {
+            W: this.input.keyboard!.addKey('W'),
+            A: this.input.keyboard!.addKey('A'),
+            S: this.input.keyboard!.addKey('S'),
+            D: this.input.keyboard!.addKey('D'),
+        };
+
+        // Input: click to move (left click only)
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (pointer.y < UI_HEIGHT) return; // Don't process clicks on top UI
-            if (pointer.y > this.cameras.main.height - 50) return; // Don't process clicks on bottom panel
+            if (pointer.rightButtonDown()) {
+                this.isDragging = true;
+                this.dragStartX = pointer.x;
+                this.dragStartY = pointer.y;
+                return;
+            }
+            if (pointer.y < UI_HEIGHT) return;
+            if (pointer.y > this.cameras.main.height - 50) return;
             this.handleMapClick(pointer);
         });
 
-        // Mouse hover for hex highlight
+        // Mouse hover + right-click drag panning
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            if (this.isDragging) {
+                this.cameras.main.scrollX -= (pointer.x - this.dragStartX);
+                this.cameras.main.scrollY -= (pointer.y - this.dragStartY);
+                this.dragStartX = pointer.x;
+                this.dragStartY = pointer.y;
+                return;
+            }
             if (pointer.y < UI_HEIGHT) {
                 this.hoverGraphics.clear();
                 return;
             }
             this.handleHover(pointer);
         });
+
+        this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+            if (pointer.rightButtonReleased()) this.isDragging = false;
+        });
+
+        // Zoom via mouse wheel
+        this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gos: Phaser.GameObjects.GameObject[], _dx: number, dy: number) => {
+            if (dy > 0) this.setZoomLevel(this.zoomIndex - 1);   // scroll down = zoom out
+            else if (dy < 0) this.setZoomLevel(this.zoomIndex + 1); // scroll up = zoom in
+        });
+
+        this.setZoomLevel(DEFAULT_ZOOM_INDEX);
+
+        // Center camera on current player's hero
+        const hero = gameStore.getSelectedHero();
+        if (hero) {
+            const heroPixel = this.hexToPixel(hero.posX, hero.posY);
+            this.cameras.main.centerOn(heroPixel.x, heroPixel.y + UI_HEIGHT);
+        }
     }
 
     update(): void {
-        // Handled via events
+        const SCROLL_SPEED = 8;
+        const cam = this.cameras.main;
+
+        // Keyboard panning
+        if (this.cursors?.left.isDown || this.wasd?.A.isDown) cam.scrollX -= SCROLL_SPEED;
+        if (this.cursors?.right.isDown || this.wasd?.D.isDown) cam.scrollX += SCROLL_SPEED;
+        if (this.cursors?.up.isDown || this.wasd?.W.isDown) cam.scrollY -= SCROLL_SPEED;
+        if (this.cursors?.down.isDown || this.wasd?.S.isDown) cam.scrollY += SCROLL_SPEED;
+
+        // Edge scrolling
+        const EDGE = 20;
+        const pointer = this.input.activePointer;
+        if (pointer.x < EDGE) cam.scrollX -= SCROLL_SPEED;
+        if (pointer.x > cam.width - EDGE) cam.scrollX += SCROLL_SPEED;
+        if (pointer.y < EDGE) cam.scrollY -= SCROLL_SPEED;
+        if (pointer.y > cam.height - EDGE) cam.scrollY += SCROLL_SPEED;
+    }
+
+    private setZoomLevel(index: number): void {
+        const clamped = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, index));
+        this.zoomIndex = clamped;
+        this.cameras.main.setZoom(ZOOM_LEVELS[clamped]);
     }
 
     private drawMap(state: GameState): void {
@@ -186,19 +279,24 @@ export class AdventureMapScene extends Phaser.Scene {
         }
     }
 
+    private addUI<T extends Phaser.GameObjects.GameObject>(obj: T): T {
+        this.uiElements.push(obj);
+        return obj;
+    }
+
     private createUI(state: GameState): void {
         const { width } = this.cameras.main;
         const player = gameStore.getCurrentPlayer()!;
         const hero = gameStore.getSelectedHero()!;
 
-        // UI background (fixed, drawn on default camera)
-        this.add.rectangle(width / 2, UI_HEIGHT / 2, width, UI_HEIGHT, 0x1a1a2e, 0.95)
+        // UI background
+        this.addUI(this.add.rectangle(width / 2, UI_HEIGHT / 2, width, UI_HEIGHT, 0x1a1a2e, 0.95)
             .setDepth(100)
-            .setScrollFactor(0);
+            .setScrollFactor(0));
 
-        this.add.rectangle(width / 2, UI_HEIGHT, width, 2, 0xc4a44e)
+        this.addUI(this.add.rectangle(width / 2, UI_HEIGHT, width, 2, 0xc4a44e)
             .setDepth(100)
-            .setScrollFactor(0);
+            .setScrollFactor(0));
 
         // Resources
         const resources = player.resources;
@@ -210,77 +308,77 @@ export class AdventureMapScene extends Phaser.Scene {
 
         let xPos = 20;
         for (const { key, label, color } of resourceLabels) {
-            this.add.text(xPos, 10, label + ':', {
+            this.addUI(this.add.text(xPos, 10, label + ':', {
                 fontFamily: 'Arial',
                 fontSize: '14px',
                 color: '#aaaaaa',
-            }).setDepth(101).setScrollFactor(0);
+            }).setDepth(101).setScrollFactor(0));
 
-            this.resourceTexts[key] = this.add.text(xPos, 30, String(resources[key as keyof typeof resources]), {
+            this.resourceTexts[key] = this.addUI(this.add.text(xPos, 30, String(resources[key as keyof typeof resources]), {
                 fontFamily: 'Arial',
                 fontSize: '16px',
                 color: color,
                 fontStyle: 'bold',
-            }).setDepth(101).setScrollFactor(0);
+            }).setDepth(101).setScrollFactor(0));
 
             xPos += 100;
         }
 
         // Day counter
-        this.dayText = this.add.text(width / 2, 12, this.getDayString(state), {
+        this.dayText = this.addUI(this.add.text(width / 2, 12, this.getDayString(state), {
             fontFamily: 'serif',
             fontSize: '16px',
             color: '#c4a44e',
             fontStyle: 'bold',
-        }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
 
         // Current player indicator
         const playerColor = Phaser.Display.Color.HexStringToColor(player.color).color;
-        this.playerIndicatorRect = this.add.rectangle(width / 2 - 50, 38, 12, 12, playerColor)
-            .setDepth(101).setScrollFactor(0);
+        this.playerIndicatorRect = this.addUI(this.add.rectangle(width / 2 - 50, 38, 12, 12, playerColor)
+            .setDepth(101).setScrollFactor(0));
 
-        this.playerIndicator = this.add.text(width / 2 - 38, 38, player.name, {
+        this.playerIndicator = this.addUI(this.add.text(width / 2 - 38, 38, player.name, {
             fontFamily: 'serif',
             fontSize: '14px',
             color: player.color,
-        }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0);
+        }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0));
 
         // Movement points
-        this.movementText = this.add.text(width - 380, 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
+        this.movementText = this.addUI(this.add.text(width - 380, 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#88cc88',
-        }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
 
         // End Turn button
-        const endTurnBg = this.add.rectangle(width - 100, UI_HEIGHT / 2, 140, 40, 0x2a2a4a)
+        const endTurnBg = this.addUI(this.add.rectangle(width - 100, UI_HEIGHT / 2, 140, 40, 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true })
             .setDepth(101)
-            .setScrollFactor(0);
+            .setScrollFactor(0));
 
-        this.add.text(width - 100, UI_HEIGHT / 2, 'End Turn', {
+        this.addUI(this.add.text(width - 100, UI_HEIGHT / 2, 'End Turn', {
             fontFamily: 'serif',
             fontSize: '18px',
             color: '#c4a44e',
-        }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
 
         endTurnBg.on('pointerover', () => endTurnBg.setFillStyle(0x3a3a5a));
         endTurnBg.on('pointerout', () => endTurnBg.setFillStyle(0x2a2a4a));
         endTurnBg.on('pointerdown', () => this.handleEndTurn());
 
         // Quit button
-        const quitBg = this.add.rectangle(width - 240, UI_HEIGHT / 2, 80, 40, 0x2a2a4a)
+        const quitBg = this.addUI(this.add.rectangle(width - 240, UI_HEIGHT / 2, 80, 40, 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true })
             .setDepth(101)
-            .setScrollFactor(0);
+            .setScrollFactor(0));
 
-        this.add.text(width - 240, UI_HEIGHT / 2, 'Quit', {
+        this.addUI(this.add.text(width - 240, UI_HEIGHT / 2, 'Quit', {
             fontFamily: 'serif',
             fontSize: '18px',
             color: '#c4a44e',
-        }).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
 
         quitBg.on('pointerover', () => quitBg.setFillStyle(0x3a3a5a));
         quitBg.on('pointerout', () => quitBg.setFillStyle(0x2a2a4a));
@@ -290,20 +388,20 @@ export class AdventureMapScene extends Phaser.Scene {
         const { height } = this.cameras.main;
         const panelHeight = 50;
 
-        this.add.rectangle(width / 2, height - panelHeight / 2, width, panelHeight, 0x1a1a2e, 0.95)
+        this.addUI(this.add.rectangle(width / 2, height - panelHeight / 2, width, panelHeight, 0x1a1a2e, 0.95)
             .setDepth(100)
-            .setScrollFactor(0);
+            .setScrollFactor(0));
 
-        this.add.rectangle(width / 2, height - panelHeight, width, 2, 0xc4a44e)
+        this.addUI(this.add.rectangle(width / 2, height - panelHeight, width, 2, 0xc4a44e)
             .setDepth(100)
-            .setScrollFactor(0);
+            .setScrollFactor(0));
 
         this.armyTexts = [];
         if (hero) {
             const slotWidth = width / Math.max(hero.army.length, 1);
             for (let i = 0; i < hero.army.length; i++) {
                 const slot = hero.army[i];
-                const txt = this.add.text(
+                const txt = this.addUI(this.add.text(
                     slotWidth * i + slotWidth / 2,
                     height - panelHeight / 2,
                     `${this.capitalize(slot.unitId)} x${slot.quantity}`,
@@ -313,14 +411,14 @@ export class AdventureMapScene extends Phaser.Scene {
                         color: '#ffffff',
                         fontStyle: 'bold',
                     },
-                ).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+                ).setOrigin(0.5).setDepth(101).setScrollFactor(0));
                 this.armyTexts.push(txt);
             }
         }
     }
 
     private createLegend(): void {
-        const { width, height } = this.cameras.main;
+        const { width } = this.cameras.main;
         const entries = Object.entries(TERRAIN_COLORS);
         const padding = 8;
         const rowHeight = 18;
@@ -330,26 +428,67 @@ export class AdventureMapScene extends Phaser.Scene {
         const panelX = width - panelWidth - 10;
         const panelY = UI_HEIGHT + 10;
 
-        this.add.rectangle(
+        this.addUI(this.add.rectangle(
             panelX + panelWidth / 2, panelY + panelHeight / 2,
             panelWidth, panelHeight, 0x1a1a2e, 0.9,
-        ).setDepth(101).setScrollFactor(0);
+        ).setDepth(101).setScrollFactor(0));
 
         for (let i = 0; i < entries.length; i++) {
             const [terrain, color] = entries[i];
             const y = panelY + padding + i * rowHeight + rowHeight / 2;
 
-            this.add.rectangle(
+            this.addUI(this.add.rectangle(
                 panelX + padding + swatchSize / 2, y,
                 swatchSize, swatchSize, color,
-            ).setDepth(101).setScrollFactor(0);
+            ).setDepth(101).setScrollFactor(0));
 
-            this.add.text(panelX + padding + swatchSize + 6, y, this.capitalize(terrain), {
+            this.addUI(this.add.text(panelX + padding + swatchSize + 6, y, this.capitalize(terrain), {
                 fontFamily: 'Arial',
                 fontSize: '11px',
                 color: '#ffffff',
-            }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0);
+            }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0));
         }
+
+        // Zoom buttons below legend
+        const btnWidth = 40;
+        const btnHeight = 30;
+        const btnGap = 6;
+        const zoomY = panelY + panelHeight + btnGap + btnHeight / 2;
+        const zoomPlusBg = this.addUI(this.add.rectangle(
+            panelX + panelWidth / 2 - btnWidth / 2 - btnGap / 2, zoomY,
+            btnWidth, btnHeight, 0x2a2a4a,
+        ).setStrokeStyle(2, 0xc4a44e)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(101).setScrollFactor(0));
+
+        this.addUI(this.add.text(
+            panelX + panelWidth / 2 - btnWidth / 2 - btnGap / 2, zoomY, '+', {
+                fontFamily: 'serif',
+                fontSize: '20px',
+                color: '#c4a44e',
+            }).setOrigin(0.5).setDepth(102).setScrollFactor(0));
+
+        zoomPlusBg.on('pointerover', () => zoomPlusBg.setFillStyle(0x3a3a5a));
+        zoomPlusBg.on('pointerout', () => zoomPlusBg.setFillStyle(0x2a2a4a));
+        zoomPlusBg.on('pointerdown', () => this.setZoomLevel(this.zoomIndex + 1));
+
+        const zoomMinusBg = this.addUI(this.add.rectangle(
+            panelX + panelWidth / 2 + btnWidth / 2 + btnGap / 2, zoomY,
+            btnWidth, btnHeight, 0x2a2a4a,
+        ).setStrokeStyle(2, 0xc4a44e)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(101).setScrollFactor(0));
+
+        this.addUI(this.add.text(
+            panelX + panelWidth / 2 + btnWidth / 2 + btnGap / 2, zoomY, '\u2212', {
+                fontFamily: 'serif',
+                fontSize: '20px',
+                color: '#c4a44e',
+            }).setOrigin(0.5).setDepth(102).setScrollFactor(0));
+
+        zoomMinusBg.on('pointerover', () => zoomMinusBg.setFillStyle(0x3a3a5a));
+        zoomMinusBg.on('pointerout', () => zoomMinusBg.setFillStyle(0x2a2a4a));
+        zoomMinusBg.on('pointerdown', () => this.setZoomLevel(this.zoomIndex - 1));
     }
 
     private async handleMapClick(pointer: Phaser.Input.Pointer): Promise<void> {
@@ -359,9 +498,9 @@ export class AdventureMapScene extends Phaser.Scene {
         const hero = gameStore.getSelectedHero();
         if (!state || !hero) return;
 
-        // Convert screen coords to map coords
-        const mapX = pointer.x - this.mapContainer.x;
-        const mapY = pointer.y - this.mapContainer.y;
+        // Convert world coords to map coords
+        const mapX = pointer.worldX - this.mapContainer.x;
+        const mapY = pointer.worldY - this.mapContainer.y;
         const hex = this.pixelToHex(mapX, mapY);
 
         if (hex.col < 0 || hex.col >= state.mapWidth || hex.row < 0 || hex.row >= state.mapHeight) {
@@ -540,6 +679,7 @@ export class AdventureMapScene extends Phaser.Scene {
 
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6)
             .setDepth(300).setScrollFactor(0);
+        this.cameras.main.ignore(overlay);
 
         const text = this.add.text(width / 2, height / 2, `${playerName}'s Turn`, {
             fontFamily: 'serif',
@@ -547,6 +687,7 @@ export class AdventureMapScene extends Phaser.Scene {
             color: playerColor,
             fontStyle: 'bold',
         }).setOrigin(0.5).setDepth(301).setScrollFactor(0);
+        this.cameras.main.ignore(text);
 
         this.time.delayedCall(1500, () => {
             overlay.destroy();
@@ -664,8 +805,8 @@ export class AdventureMapScene extends Phaser.Scene {
         const state = gameStore.getState();
         if (!state) return;
 
-        const mapX = pointer.x - this.mapContainer.x;
-        const mapY = pointer.y - this.mapContainer.y;
+        const mapX = pointer.worldX - this.mapContainer.x;
+        const mapY = pointer.worldY - this.mapContainer.y;
         const hex = this.pixelToHex(mapX, mapY);
 
         if (hex.col < 0 || hex.col >= state.mapWidth || hex.row < 0 || hex.row >= state.mapHeight) return;
@@ -744,28 +885,29 @@ export class AdventureMapScene extends Phaser.Scene {
 
         const { width, height } = this.cameras.main;
         const isVictory = state.status === 'won';
+        const endUi: Phaser.GameObjects.GameObject[] = [];
 
         // Dark overlay — interactive to absorb stray clicks
-        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
+        endUi.push(this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
             .setDepth(200)
             .setScrollFactor(0)
-            .setInteractive();
+            .setInteractive());
 
         // Title
-        this.add.text(width / 2, 60, isVictory ? 'Victory!' : 'Defeat', {
+        endUi.push(this.add.text(width / 2, 60, isVictory ? 'Victory!' : 'Defeat', {
             fontFamily: 'serif',
             fontSize: '48px',
             color: isVictory ? '#c4a44e' : '#cc3333',
             fontStyle: 'bold',
-        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0));
 
         // Subtitle: game duration
         const duration = `Month ${state.currentMonth}, Week ${state.currentWeek}, Day ${state.currentDay}`;
-        this.add.text(width / 2, 110, duration, {
+        endUi.push(this.add.text(width / 2, 110, duration, {
             fontFamily: 'serif',
             fontSize: '18px',
             color: '#aaaaaa',
-        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0));
 
         // Sort players: alive first (by hero count desc), then eliminated
         const sorted = [...state.players].sort((a, b) => {
@@ -780,12 +922,12 @@ export class AdventureMapScene extends Phaser.Scene {
         const rowHeight = 36;
 
         // Header
-        this.add.text(width / 2, startY - 10, 'Player Results', {
+        endUi.push(this.add.text(width / 2, startY - 10, 'Player Results', {
             fontFamily: 'serif',
             fontSize: '20px',
             color: '#c4a44e',
             fontStyle: 'bold',
-        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0));
 
         for (let i = 0; i < sorted.length; i++) {
             const p = sorted[i];
@@ -794,23 +936,23 @@ export class AdventureMapScene extends Phaser.Scene {
             const playerColor = Phaser.Display.Color.HexStringToColor(p.color).color;
 
             // Color swatch
-            this.add.rectangle(width / 2 - 180, y, 12, 12, playerColor)
-                .setDepth(201).setScrollFactor(0);
+            endUi.push(this.add.rectangle(width / 2 - 180, y, 12, 12, playerColor)
+                .setDepth(201).setScrollFactor(0));
 
             // Player name
-            this.add.text(width / 2 - 165, y, p.name, {
+            endUi.push(this.add.text(width / 2 - 165, y, p.name, {
                 fontFamily: 'Arial',
                 fontSize: '15px',
                 color: p.color,
                 fontStyle: 'bold',
-            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
+            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0));
 
             // Faction
-            this.add.text(width / 2 - 60, y, this.capitalize(p.faction), {
+            endUi.push(this.add.text(width / 2 - 60, y, this.capitalize(p.faction), {
                 fontFamily: 'Arial',
                 fontSize: '13px',
                 color: '#aaaaaa',
-            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
+            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0));
 
             // Status badge
             let statusText: string;
@@ -826,12 +968,12 @@ export class AdventureMapScene extends Phaser.Scene {
                 statusColor = '#cc3333';
             }
 
-            this.add.text(width / 2 + 40, y, statusText, {
+            endUi.push(this.add.text(width / 2 + 40, y, statusText, {
                 fontFamily: 'Arial',
                 fontSize: '13px',
                 color: statusColor,
                 fontStyle: 'bold',
-            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
+            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0));
 
             // Stats: total units across all heroes
             const totalUnits = p.heroes.reduce((sum, h) =>
@@ -839,11 +981,11 @@ export class AdventureMapScene extends Phaser.Scene {
             const statsText = alive
                 ? `${p.resources.gold}g | ${p.heroes.length} hero(es) | ${totalUnits} units`
                 : '--';
-            this.add.text(width / 2 + 130, y, statsText, {
+            endUi.push(this.add.text(width / 2 + 130, y, statsText, {
                 fontFamily: 'Arial',
                 fontSize: '13px',
                 color: alive ? '#ffffff' : '#666666',
-            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
+            }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0));
         }
 
         // Main Menu button
@@ -853,16 +995,22 @@ export class AdventureMapScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setDepth(201)
             .setScrollFactor(0);
+        endUi.push(btnBg);
 
-        this.add.text(width / 2, btnY, 'Main Menu', {
+        endUi.push(this.add.text(width / 2, btnY, 'Main Menu', {
             fontFamily: 'serif',
             fontSize: '20px',
             color: '#c4a44e',
-        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0));
 
         btnBg.on('pointerover', () => btnBg.setFillStyle(0x3a3a5a));
         btnBg.on('pointerout', () => btnBg.setFillStyle(0x2a2a4a));
         btnBg.on('pointerdown', () => this.scene.start('MainMenuScene'));
+
+        // Ignore all game-end UI on main camera so zoom doesn't affect them
+        for (const obj of endUi) {
+            this.cameras.main.ignore(obj);
+        }
     }
 
     private capitalize(s: string): string {

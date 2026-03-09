@@ -68,11 +68,19 @@ class GameController extends AbstractController
         $playerCount = min(count($playersData), 4);
         $playersData = array_slice($playersData, 0, $playerCount);
 
-        $mapWidth = 20;
-        $mapHeight = 20;
+        $mapSizeKey = $data['mapSize'] ?? 'S';
+        if (!isset(MapGenerator::MAP_SIZES[$mapSizeKey])) {
+            return new JsonResponse(
+                ['error' => 'Invalid map size. Valid sizes: ' . implode(', ', array_keys(MapGenerator::MAP_SIZES))],
+                Response::HTTP_BAD_REQUEST,
+            );
+        }
+        $mapConfig = MapGenerator::getMapConfig($mapSizeKey);
+        $mapWidth = $mapConfig['width'];
+        $mapHeight = $mapConfig['height'];
 
         // Select starting positions for the number of players
-        $startPositions = array_slice(MapGenerator::START_POSITIONS, 0, $playerCount);
+        $startPositions = array_slice($mapConfig['startPositions'], 0, $playerCount);
 
         // Generate map
         $mapData = $this->mapGenerator->generate($mapWidth, $mapHeight, $startPositions);
@@ -122,7 +130,7 @@ class GameController extends AbstractController
         }
 
         // Generate neutral stacks
-        $neutralStackData = $this->mapGenerator->generateNeutralStacks($mapData, 8, $startPositions);
+        $neutralStackData = $this->mapGenerator->generateNeutralStacks($mapData, $mapConfig['neutralStackCount'], $startPositions);
         foreach ($neutralStackData as $stackData) {
             $neutralStack = new NeutralStack();
             $neutralStack->setPosX($stackData['posX']);

@@ -238,6 +238,8 @@ class Game
             'currentDay' => $this->currentDay,
             'currentWeek' => $this->currentWeek,
             'currentMonth' => $this->currentMonth,
+            'mapWidth' => $this->mapWidth,
+            'mapHeight' => $this->mapHeight,
             'players' => array_values(array_map(fn(Player $p) => [
                 'name' => $p->getName(),
                 'faction' => $p->getFaction(),
