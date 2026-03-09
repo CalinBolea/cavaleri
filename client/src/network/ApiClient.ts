@@ -72,6 +72,11 @@ class ApiClient {
         return response.json();
     }
 
+    async deleteGame(gameId: string): Promise<void> {
+        const response = await fetch(`${API_BASE}/games/${gameId}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error(`Failed to delete game: ${response.statusText}`);
+    }
+
     async endTurn(gameId: string): Promise<GameState> {
         const response = await fetch(`${API_BASE}/games/${gameId}/end-turn`, {
             method: 'POST',

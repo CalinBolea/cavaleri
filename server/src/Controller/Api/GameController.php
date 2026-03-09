@@ -151,6 +151,21 @@ class GameController extends AbstractController
         return new JsonResponse($game->toArray());
     }
 
+    #[Route('/games/{id}', name: 'api_games_delete', methods: ['DELETE'])]
+    public function delete(string $id): Response
+    {
+        $game = $this->gameRepository->find($id);
+
+        if (!$game) {
+            return new JsonResponse(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->em->remove($game);
+        $this->em->flush();
+
+        return new Response(null, Response::HTTP_NO_CONTENT);
+    }
+
     #[Route('/games/{id}/end-turn', name: 'api_games_end_turn', methods: ['POST'])]
     public function endTurn(string $id): JsonResponse
     {

@@ -6,6 +6,7 @@ export class MainMenuScene extends Phaser.Scene {
     private mainButtons: Phaser.GameObjects.GameObject[] = [];
     private listContainer: Phaser.GameObjects.Container | null = null;
     private setupContainer: Phaser.GameObjects.Container | null = null;
+    private confirmContainer: Phaser.GameObjects.Container | null = null;
 
     constructor() {
         super({ key: 'MainMenuScene' });
@@ -348,9 +349,32 @@ export class MainMenuScene extends Phaser.Scene {
                 }).setOrigin(0, 0.5);
                 this.listContainer.add(leftText);
 
+                // Delete button
+                const delBtnX = panelX + rowW / 2 - 20;
+                const delBg = this.add.rectangle(delBtnX, rowY, 30, 30, 0x661a1a)
+                    .setStrokeStyle(1, 0xcc3333)
+                    .setInteractive({ useHandCursor: true })
+                    .setDepth(1);
+                this.listContainer.add(delBg);
+
+                const delText = this.add.text(delBtnX, rowY, 'X', {
+                    fontFamily: 'serif',
+                    fontSize: '14px',
+                    color: '#cc3333',
+                    fontStyle: 'bold',
+                }).setOrigin(0.5).setDepth(1);
+                this.listContainer.add(delText);
+
+                delBg.on('pointerover', () => delBg.setFillStyle(0x882222));
+                delBg.on('pointerout', () => delBg.setFillStyle(0x661a1a));
+                delBg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+                    pointer.event.stopPropagation();
+                    this.showDeleteConfirmation(game.id);
+                });
+
                 // Right: day info
                 const dayInfo = `Month ${game.currentMonth}, Week ${game.currentWeek}, Day ${game.currentDay}`;
-                const rightText = this.add.text(panelX + rowW / 2 - 16, rowY, dayInfo, {
+                const rightText = this.add.text(delBtnX - 40, rowY, dayInfo, {
                     fontFamily: 'serif',
                     fontSize: '14px',
                     color: '#c4a44e',
@@ -366,6 +390,81 @@ export class MainMenuScene extends Phaser.Scene {
             loadingText.setText('Failed to load games.');
             loadingText.setColor('#cc3333');
         }
+    }
+
+    private showDeleteConfirmation(gameId: string): void {
+        const { width, height } = this.cameras.main;
+
+        this.confirmContainer = this.add.container(0, 0).setDepth(10);
+
+        // Semi-transparent overlay
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6)
+            .setInteractive();
+        this.confirmContainer.add(overlay);
+
+        // Dialog panel
+        const dialogW = 300;
+        const dialogH = 140;
+        const dialogBg = this.add.rectangle(width / 2, height / 2, dialogW, dialogH, 0x1a1a2e)
+            .setStrokeStyle(2, 0xc4a44e);
+        this.confirmContainer.add(dialogBg);
+
+        const promptText = this.add.text(width / 2, height / 2 - 30, 'Delete this game?', {
+            fontFamily: 'serif',
+            fontSize: '20px',
+            color: '#ffffff',
+        }).setOrigin(0.5);
+        this.confirmContainer.add(promptText);
+
+        // Yes button
+        const yesBg = this.add.rectangle(width / 2 - 60, height / 2 + 25, 90, 36, 0x661a1a)
+            .setStrokeStyle(1, 0xcc3333)
+            .setInteractive({ useHandCursor: true });
+        const yesText = this.add.text(width / 2 - 60, height / 2 + 25, 'Yes', {
+            fontFamily: 'serif',
+            fontSize: '18px',
+            color: '#cc3333',
+        }).setOrigin(0.5);
+        this.confirmContainer.add(yesBg);
+        this.confirmContainer.add(yesText);
+
+        yesBg.on('pointerover', () => yesBg.setFillStyle(0x882222));
+        yesBg.on('pointerout', () => yesBg.setFillStyle(0x661a1a));
+        yesBg.on('pointerdown', async () => {
+            yesText.setText('...');
+            yesBg.disableInteractive();
+            try {
+                await apiClient.deleteGame(gameId);
+                this.confirmContainer?.destroy();
+                this.confirmContainer = null;
+                this.listContainer?.destroy();
+                this.listContainer = null;
+                this.showLoadGamePanel();
+            } catch (error) {
+                console.error('Failed to delete game:', error);
+                yesText.setText('Error');
+                yesBg.setInteractive({ useHandCursor: true });
+            }
+        });
+
+        // No button
+        const noBg = this.add.rectangle(width / 2 + 60, height / 2 + 25, 90, 36, 0x2a2a4a)
+            .setStrokeStyle(1, 0xc4a44e)
+            .setInteractive({ useHandCursor: true });
+        const noText = this.add.text(width / 2 + 60, height / 2 + 25, 'No', {
+            fontFamily: 'serif',
+            fontSize: '18px',
+            color: '#c4a44e',
+        }).setOrigin(0.5);
+        this.confirmContainer.add(noBg);
+        this.confirmContainer.add(noText);
+
+        noBg.on('pointerover', () => noBg.setFillStyle(0x3a3a5a));
+        noBg.on('pointerout', () => noBg.setFillStyle(0x2a2a4a));
+        noBg.on('pointerdown', () => {
+            this.confirmContainer?.destroy();
+            this.confirmContainer = null;
+        });
     }
 
     private async loadGame(summary: GameSummary): Promise<void> {
