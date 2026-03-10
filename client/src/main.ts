@@ -11,6 +11,9 @@ const config: Phaser.Types.Core.GameConfig = {
     backgroundColor: '#1a1a2e',
     parent: document.body,
     scene: [BootScene, PreloadScene, MainMenuScene, AdventureMapScene],
+    input: {
+        activePointers: 2,
+    },
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,

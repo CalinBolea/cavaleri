@@ -46,6 +46,12 @@ export class AdventureMapScene extends Phaser.Scene {
     private isDragging = false;
     private dragStartX = 0;
     private dragStartY = 0;
+    private pointerDownX = 0;
+    private pointerDownY = 0;
+    private pointerIsDown = false;
+    private readonly DRAG_THRESHOLD = 10;
+    private lastPinchDistance = 0;
+    private isTouchDevice = false;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
 
@@ -111,6 +117,9 @@ export class AdventureMapScene extends Phaser.Scene {
         // Disable right-click context menu
         this.input.mouse?.disableContextMenu();
 
+        // Detect touch device
+        this.isTouchDevice = this.sys.game.device.input.touch;
+
         // Keyboard setup
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.wasd = {
@@ -120,37 +129,61 @@ export class AdventureMapScene extends Phaser.Scene {
             D: this.input.keyboard!.addKey('D'),
         };
 
-        // Input: click to move (left click only)
+        // Unified tap/drag input handling
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (pointer.rightButtonDown()) {
-                this.isDragging = true;
-                this.dragStartX = pointer.x;
-                this.dragStartY = pointer.y;
-                return;
-            }
-            if (pointer.y < UI_HEIGHT) return;
-            if (pointer.y > this.cameras.main.height - 50) return;
-            this.handleMapClick(pointer);
+            // Skip if second finger is down (pinch gesture)
+            if (this.input.pointer1.isDown && this.input.pointer2.isDown) return;
+
+            this.pointerDownX = pointer.x;
+            this.pointerDownY = pointer.y;
+            this.pointerIsDown = true;
+            this.isDragging = false;
+            this.dragStartX = pointer.x;
+            this.dragStartY = pointer.y;
         });
 
-        // Mouse hover + right-click drag panning
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-            if (this.isDragging) {
-                this.cameras.main.scrollX -= (pointer.x - this.dragStartX);
-                this.cameras.main.scrollY -= (pointer.y - this.dragStartY);
-                this.dragStartX = pointer.x;
-                this.dragStartY = pointer.y;
-                return;
+            // Skip if pinch gesture
+            if (this.input.pointer1.isDown && this.input.pointer2.isDown) return;
+
+            if (this.pointerIsDown) {
+                const dx = pointer.x - this.pointerDownX;
+                const dy = pointer.y - this.pointerDownY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (!this.isDragging && dist > this.DRAG_THRESHOLD) {
+                    this.isDragging = true;
+                }
+
+                if (this.isDragging) {
+                    this.cameras.main.scrollX -= (pointer.x - this.dragStartX);
+                    this.cameras.main.scrollY -= (pointer.y - this.dragStartY);
+                    this.dragStartX = pointer.x;
+                    this.dragStartY = pointer.y;
+                    return;
+                }
             }
+
             if (pointer.y < UI_HEIGHT) {
                 this.hoverGraphics.clear();
                 return;
             }
-            this.handleHover(pointer);
+            if (!this.isDragging) {
+                this.handleHover(pointer);
+            }
         });
 
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-            if (pointer.rightButtonReleased()) this.isDragging = false;
+            if (!this.pointerIsDown) return;
+            this.pointerIsDown = false;
+
+            if (!this.isDragging) {
+                // Treat as tap — fire map click
+                if (pointer.y >= UI_HEIGHT && pointer.y <= this.cameras.main.height - 50) {
+                    this.handleMapClick(pointer);
+                }
+            }
+            this.isDragging = false;
         });
 
         // Zoom via mouse wheel
@@ -179,13 +212,44 @@ export class AdventureMapScene extends Phaser.Scene {
         if (this.cursors?.up.isDown || this.wasd?.W.isDown) cam.scrollY -= SCROLL_SPEED;
         if (this.cursors?.down.isDown || this.wasd?.S.isDown) cam.scrollY += SCROLL_SPEED;
 
-        // Edge scrolling
-        const EDGE = 20;
-        const pointer = this.input.activePointer;
-        if (pointer.x < EDGE) cam.scrollX -= SCROLL_SPEED;
-        if (pointer.x > cam.width - EDGE) cam.scrollX += SCROLL_SPEED;
-        if (pointer.y < EDGE) cam.scrollY -= SCROLL_SPEED;
-        if (pointer.y > cam.height - EDGE) cam.scrollY += SCROLL_SPEED;
+        // Edge scrolling (disabled on touch — fires constantly during normal touch)
+        if (!this.isTouchDevice) {
+            const EDGE = 20;
+            const pointer = this.input.activePointer;
+            if (pointer.x < EDGE) cam.scrollX -= SCROLL_SPEED;
+            if (pointer.x > cam.width - EDGE) cam.scrollX += SCROLL_SPEED;
+            if (pointer.y < EDGE) cam.scrollY -= SCROLL_SPEED;
+            if (pointer.y > cam.height - EDGE) cam.scrollY += SCROLL_SPEED;
+        }
+
+        // Pinch-to-zoom
+        this.handlePinchZoom();
+    }
+
+    private handlePinchZoom(): void {
+        const pointer1 = this.input.pointer1;
+        const pointer2 = this.input.pointer2;
+
+        if (pointer1.isDown && pointer2.isDown) {
+            const dx = pointer1.x - pointer2.x;
+            const dy = pointer1.y - pointer2.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (this.lastPinchDistance > 0) {
+                const delta = dist - this.lastPinchDistance;
+                if (delta > 20) {
+                    this.setZoomLevel(this.zoomIndex + 1);
+                    this.lastPinchDistance = dist;
+                } else if (delta < -20) {
+                    this.setZoomLevel(this.zoomIndex - 1);
+                    this.lastPinchDistance = dist;
+                }
+            } else {
+                this.lastPinchDistance = dist;
+            }
+        } else {
+            this.lastPinchDistance = 0;
+        }
     }
 
     private setZoomLevel(index: number): void {
