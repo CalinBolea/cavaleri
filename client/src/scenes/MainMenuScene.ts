@@ -111,9 +111,9 @@ export class MainMenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
         this.setupContainer.add(title);
 
-        const factions = ['castle', 'necropolis'];
+        const factions = ['castle', 'rampart', 'tower', 'inferno', 'necropolis', 'dungeon', 'stronghold', 'fortress'];
         let playerCount = 2;
-        const playerFactions: string[] = ['castle', 'necropolis', 'castle', 'necropolis'];
+        const playerFactions: string[] = ['castle', 'necropolis', 'rampart', 'inferno'];
         const mapSizes = ['S', 'M', 'L'];
         const mapSizeLabels: Record<string, string> = { S: 'Small', M: 'Medium', L: 'Large' };
         let selectedMapSize = 'S';
@@ -157,7 +157,7 @@ export class MainMenuScene extends Phaser.Scene {
         }
 
         // Map size selector
-        const sizeLabelY = panelY - panelH / 2 + 120;
+        const sizeLabelY = panelY - panelH / 2 + 130;
         const sizeLabel = this.add.text(panelX - 100, sizeLabelY, 'Map Size:', {
             fontFamily: 'serif',
             fontSize: '20px',
@@ -198,11 +198,67 @@ export class MainMenuScene extends Phaser.Scene {
         const rowsContainer = this.add.container(0, 0);
         this.setupContainer.add(rowsContainer);
 
+        let dropdownContainer: Phaser.GameObjects.Container | null = null;
+
+        const destroyDropdown = () => {
+            if (dropdownContainer) {
+                dropdownContainer.destroy();
+                dropdownContainer = null;
+            }
+        };
+
+        const openDropdown = (btnX: number, btnY: number, idx: number, factionText: Phaser.GameObjects.Text) => {
+            destroyDropdown();
+
+            dropdownContainer = this.add.container(0, 0).setDepth(20);
+
+            // Full-screen hit area to catch outside clicks
+            const { width: screenW, height: screenH } = this.cameras.main;
+            const blocker = this.add.rectangle(screenW / 2, screenH / 2, screenW, screenH, 0x000000, 0)
+                .setInteractive();
+            dropdownContainer.add(blocker);
+            blocker.on('pointerdown', () => destroyDropdown());
+
+            const rowW = 160;
+            const rowH = 30;
+
+            for (let f = 0; f < factions.length; f++) {
+                const ry = btnY + 18 + f * rowH + rowH / 2;
+                const isSelected = factions[f] === playerFactions[idx];
+
+                const rowBg = this.add.rectangle(btnX, ry, rowW, rowH, isSelected ? 0xc4a44e : 0x2a2a4a)
+                    .setStrokeStyle(1, 0x444466)
+                    .setInteractive({ useHandCursor: true });
+                dropdownContainer.add(rowBg);
+
+                const rowText = this.add.text(btnX, ry, this.capitalize(factions[f]), {
+                    fontFamily: 'serif',
+                    fontSize: '14px',
+                    color: isSelected ? '#000000' : '#c4a44e',
+                }).setOrigin(0.5);
+                dropdownContainer.add(rowText);
+
+                if (!isSelected) {
+                    rowBg.on('pointerover', () => rowBg.setFillStyle(0x3a3a5a));
+                    rowBg.on('pointerout', () => rowBg.setFillStyle(0x2a2a4a));
+                }
+
+                const faction = factions[f];
+                rowBg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+                    pointer.event.stopPropagation();
+                    playerFactions[idx] = faction;
+                    factionText.setText(this.capitalize(faction));
+                    destroyDropdown();
+                });
+            }
+        };
+
         const rebuildPlayerRows = () => {
+            destroyDropdown();
             rowsContainer.removeAll(true);
 
             for (let i = 0; i < playerCount; i++) {
-                const rowY = panelY - panelH / 2 + 170 + i * 50;
+                const rowY = panelY - panelH / 2 + 185 + i * 50;
 
                 const nameText = this.add.text(panelX - 180, rowY, `Player ${i + 1}`, {
                     fontFamily: 'serif',
@@ -227,9 +283,7 @@ export class MainMenuScene extends Phaser.Scene {
                 factionBg.on('pointerover', () => factionBg.setFillStyle(0x3a3a5a));
                 factionBg.on('pointerout', () => factionBg.setFillStyle(0x2a2a4a));
                 factionBg.on('pointerdown', () => {
-                    const currentIdx = factions.indexOf(playerFactions[idx]);
-                    playerFactions[idx] = factions[(currentIdx + 1) % factions.length];
-                    factionText.setText(this.capitalize(playerFactions[idx]));
+                    openDropdown(panelX + 80, rowY, idx, factionText);
                 });
             }
         };
@@ -237,7 +291,7 @@ export class MainMenuScene extends Phaser.Scene {
         rebuildPlayerRows();
 
         // Start button
-        const startY = panelY + panelH / 2 - 70;
+        const startY = panelY + panelH / 2 - 85;
         const startBg = this.add.rectangle(panelX, startY, 160, 44, 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true });
@@ -253,6 +307,7 @@ export class MainMenuScene extends Phaser.Scene {
         startBg.on('pointerover', () => startBg.setFillStyle(0x3a3a5a));
         startBg.on('pointerout', () => startBg.setFillStyle(0x2a2a4a));
         startBg.on('pointerdown', async () => {
+            destroyDropdown();
             startText.setText('Creating...');
             startBg.disableInteractive();
 
@@ -289,6 +344,7 @@ export class MainMenuScene extends Phaser.Scene {
         backBg.on('pointerover', () => backBg.setFillStyle(0x3a3a5a));
         backBg.on('pointerout', () => backBg.setFillStyle(0x2a2a4a));
         backBg.on('pointerdown', () => {
+            destroyDropdown();
             this.setupContainer?.destroy();
             this.setupContainer = null;
             this.showMainButtons();

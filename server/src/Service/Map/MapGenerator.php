@@ -62,6 +62,12 @@ class MapGenerator
         'near' => [
             ['castle', 'pikeman', 5, 20],
             ['necropolis', 'skeleton', 6, 25],
+            ['rampart', 'centaur', 5, 20],
+            ['tower', 'gremlin', 8, 25],
+            ['inferno', 'imp', 8, 25],
+            ['dungeon', 'troglodyte', 5, 20],
+            ['stronghold', 'goblin', 8, 25],
+            ['fortress', 'gnoll', 5, 20],
         ],
         'mid' => [
             ['castle', 'pikeman', 8, 25],
@@ -70,6 +76,24 @@ class MapGenerator
             ['necropolis', 'skeleton', 10, 30],
             ['necropolis', 'walking_dead', 4, 12],
             ['necropolis', 'wight', 2, 6],
+            ['rampart', 'centaur', 8, 25],
+            ['rampart', 'dwarf', 4, 12],
+            ['rampart', 'wood_elf', 2, 6],
+            ['tower', 'gremlin', 10, 30],
+            ['tower', 'stone_gargoyle', 4, 12],
+            ['tower', 'stone_golem', 2, 6],
+            ['inferno', 'imp', 10, 30],
+            ['inferno', 'gog', 4, 12],
+            ['inferno', 'hell_hound', 2, 6],
+            ['dungeon', 'troglodyte', 8, 25],
+            ['dungeon', 'harpy', 4, 12],
+            ['dungeon', 'beholder', 2, 6],
+            ['stronghold', 'goblin', 10, 30],
+            ['stronghold', 'wolf_rider', 4, 12],
+            ['stronghold', 'orc', 2, 6],
+            ['fortress', 'gnoll', 8, 25],
+            ['fortress', 'lizardman', 4, 12],
+            ['fortress', 'serpent_fly', 2, 6],
         ],
         'far' => [
             ['castle', 'griffin', 3, 8],
@@ -78,6 +102,24 @@ class MapGenerator
             ['necropolis', 'vampire', 2, 5],
             ['necropolis', 'lich', 2, 4],
             ['necropolis', 'black_knight', 1, 3],
+            ['rampart', 'pegasus', 2, 5],
+            ['rampart', 'dendroid_guard', 2, 4],
+            ['rampart', 'unicorn', 1, 3],
+            ['tower', 'mage', 2, 5],
+            ['tower', 'genie', 2, 4],
+            ['tower', 'naga', 1, 3],
+            ['inferno', 'demon', 2, 5],
+            ['inferno', 'pit_fiend', 2, 4],
+            ['inferno', 'efreet', 1, 3],
+            ['dungeon', 'medusa', 2, 5],
+            ['dungeon', 'minotaur', 2, 4],
+            ['dungeon', 'manticore', 1, 3],
+            ['stronghold', 'ogre', 2, 5],
+            ['stronghold', 'roc', 2, 4],
+            ['stronghold', 'cyclops', 1, 3],
+            ['fortress', 'basilisk', 2, 5],
+            ['fortress', 'gorgon', 2, 4],
+            ['fortress', 'wyvern', 1, 3],
         ],
     ];
 
@@ -175,7 +217,7 @@ class MapGenerator
 
         shuffle($candidates);
 
-        $factions = ['castle', 'necropolis'];
+        $factions = ['castle', 'necropolis', 'rampart', 'tower', 'inferno', 'dungeon', 'stronghold', 'fortress'];
         $selected = [];
         foreach ($candidates as $pos) {
             if (count($selected) >= $count) {

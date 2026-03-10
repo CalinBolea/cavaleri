@@ -27,6 +27,12 @@ const DEFAULT_ZOOM_INDEX = 1;
 const FACTION_TOWN_COLORS: Record<string, number> = {
     castle: 0xd4a843,
     necropolis: 0x4a2d6b,
+    rampart: 0x2d8a4e,
+    tower: 0x4a8ab5,
+    inferno: 0xb5332e,
+    dungeon: 0x6b3fa0,
+    stronghold: 0xa0522d,
+    fortress: 0x5a7a3a,
 };
 
 export class AdventureMapScene extends Phaser.Scene {

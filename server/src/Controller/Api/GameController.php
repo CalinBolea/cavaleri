@@ -50,17 +50,51 @@ class GameController extends AbstractController
             ['unitId' => 'skeleton', 'min' => 10, 'max' => 50],
             ['unitId' => 'walking_dead', 'min' => 10, 'max' => 50],
         ],
+        'rampart' => [
+            ['unitId' => 'centaur', 'min' => 10, 'max' => 50],
+            ['unitId' => 'dwarf', 'min' => 10, 'max' => 50],
+        ],
+        'tower' => [
+            ['unitId' => 'gremlin', 'min' => 10, 'max' => 50],
+            ['unitId' => 'stone_gargoyle', 'min' => 10, 'max' => 50],
+        ],
+        'inferno' => [
+            ['unitId' => 'imp', 'min' => 10, 'max' => 50],
+            ['unitId' => 'gog', 'min' => 10, 'max' => 50],
+        ],
+        'dungeon' => [
+            ['unitId' => 'troglodyte', 'min' => 10, 'max' => 50],
+            ['unitId' => 'harpy', 'min' => 10, 'max' => 50],
+        ],
+        'stronghold' => [
+            ['unitId' => 'goblin', 'min' => 10, 'max' => 50],
+            ['unitId' => 'wolf_rider', 'min' => 10, 'max' => 50],
+        ],
+        'fortress' => [
+            ['unitId' => 'gnoll', 'min' => 10, 'max' => 50],
+            ['unitId' => 'lizardman', 'min' => 10, 'max' => 50],
+        ],
     ];
 
     private const HERO_NAMES = [
         'knight' => ['Sir Galahad', 'Lord Haart', 'Sorsha', 'Tyris'],
         'wizard' => ['Sandro', 'Vidomina', 'Thant', 'Isra'],
         'ranger' => ['Jenova', 'Ryland', 'Mephala', 'Gelu'],
+        'demoniac' => ['Calh', 'Nymus', 'Rashka', 'Xeron'],
+        'overlord' => ['Gunnar', 'Lorelei', 'Mutare', 'Alamar'],
+        'barbarian' => ['Crag Hack', 'Gretchin', 'Shiva', 'Tyraxor'],
+        'beastmaster' => ['Bron', 'Drakon', 'Tazar', 'Wystan'],
     ];
 
     private const FACTION_HERO_CLASS = [
         'castle' => 'knight',
         'necropolis' => 'wizard',
+        'rampart' => 'ranger',
+        'tower' => 'wizard',
+        'inferno' => 'demoniac',
+        'dungeon' => 'overlord',
+        'stronghold' => 'barbarian',
+        'fortress' => 'beastmaster',
     ];
 
     #[Route('/games', name: 'api_games_create', methods: ['POST'])]

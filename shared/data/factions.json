@@ -177,6 +177,126 @@
           "produces": "bone_dragon"
         }
       ]
+    },
+    {
+      "id": "rampart",
+      "name": "Rampart",
+      "description": "Forest dwellers united by nature's harmony.",
+      "primaryResource": "gold",
+      "buildings": [
+        { "id": "village_hall", "name": "Village Hall", "cost": { "gold": 0 }, "prerequisites": [], "income": { "gold": 500 } },
+        { "id": "town_hall", "name": "Town Hall", "cost": { "gold": 2500 }, "prerequisites": ["village_hall", "tavern"], "income": { "gold": 1000 } },
+        { "id": "tavern", "name": "Tavern", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [] },
+        { "id": "fort", "name": "Fort", "cost": { "gold": 2000, "wood": 20, "ore": 20 }, "prerequisites": ["tavern"] },
+        { "id": "mage_guild_1", "name": "Mage Guild Level 1", "cost": { "gold": 2000, "wood": 5, "ore": 5 }, "prerequisites": [] },
+        { "id": "centaur_stables", "name": "Centaur Stables", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "produces": "centaur" },
+        { "id": "dwarf_cottage", "name": "Dwarf Cottage", "cost": { "gold": 1000, "wood": 5, "ore": 5 }, "prerequisites": ["centaur_stables"], "produces": "dwarf" },
+        { "id": "homestead", "name": "Homestead", "cost": { "gold": 1500, "wood": 5, "ore": 5 }, "prerequisites": ["centaur_stables"], "produces": "wood_elf" },
+        { "id": "enchanted_spring", "name": "Enchanted Spring", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["homestead"], "produces": "pegasus" },
+        { "id": "dendroid_arches", "name": "Dendroid Arches", "cost": { "gold": 3500, "wood": 10, "ore": 5 }, "prerequisites": ["enchanted_spring"], "produces": "dendroid_guard" },
+        { "id": "unicorn_glade", "name": "Unicorn Glade", "cost": { "gold": 5000, "wood": 20, "ore": 20 }, "prerequisites": ["dendroid_arches"], "produces": "unicorn" },
+        { "id": "dragon_cliffs", "name": "Dragon Cliffs", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["unicorn_glade"], "produces": "green_dragon" }
+      ]
+    },
+    {
+      "id": "tower",
+      "name": "Tower",
+      "description": "Wizards and magical constructs of arcane might.",
+      "primaryResource": "gold",
+      "buildings": [
+        { "id": "village_hall", "name": "Village Hall", "cost": { "gold": 0 }, "prerequisites": [], "income": { "gold": 500 } },
+        { "id": "town_hall", "name": "Town Hall", "cost": { "gold": 2500 }, "prerequisites": ["village_hall", "tavern"], "income": { "gold": 1000 } },
+        { "id": "tavern", "name": "Tavern", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [] },
+        { "id": "fort", "name": "Fort", "cost": { "gold": 2000, "wood": 20, "ore": 20 }, "prerequisites": ["tavern"] },
+        { "id": "mage_guild_1", "name": "Mage Guild Level 1", "cost": { "gold": 2000, "wood": 5, "ore": 5 }, "prerequisites": [] },
+        { "id": "workshop", "name": "Workshop", "cost": { "gold": 400, "wood": 5 }, "prerequisites": [], "produces": "gremlin" },
+        { "id": "parapet", "name": "Parapet", "cost": { "gold": 1000, "wood": 5, "ore": 5 }, "prerequisites": ["workshop"], "produces": "stone_gargoyle" },
+        { "id": "golem_factory", "name": "Golem Factory", "cost": { "gold": 1500, "wood": 5, "ore": 10 }, "prerequisites": ["workshop"], "produces": "stone_golem" },
+        { "id": "mage_tower", "name": "Mage Tower", "cost": { "gold": 2500, "wood": 5, "ore": 5 }, "prerequisites": ["mage_guild_1", "golem_factory"], "produces": "mage" },
+        { "id": "altar_of_wishes", "name": "Altar of Wishes", "cost": { "gold": 4000, "wood": 10, "ore": 10 }, "prerequisites": ["mage_tower"], "produces": "genie" },
+        { "id": "golden_pavilion", "name": "Golden Pavilion", "cost": { "gold": 6000, "wood": 20, "ore": 20 }, "prerequisites": ["altar_of_wishes"], "produces": "naga" },
+        { "id": "cloud_temple", "name": "Cloud Temple", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["golden_pavilion"], "produces": "giant" }
+      ]
+    },
+    {
+      "id": "inferno",
+      "name": "Inferno",
+      "description": "Demons and devils from the burning hells.",
+      "primaryResource": "gold",
+      "buildings": [
+        { "id": "village_hall", "name": "Village Hall", "cost": { "gold": 0 }, "prerequisites": [], "income": { "gold": 500 } },
+        { "id": "town_hall", "name": "Town Hall", "cost": { "gold": 2500 }, "prerequisites": ["village_hall", "tavern"], "income": { "gold": 1000 } },
+        { "id": "tavern", "name": "Tavern", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [] },
+        { "id": "fort", "name": "Fort", "cost": { "gold": 2000, "wood": 20, "ore": 20 }, "prerequisites": ["tavern"] },
+        { "id": "mage_guild_1", "name": "Mage Guild Level 1", "cost": { "gold": 2000, "wood": 5, "ore": 5 }, "prerequisites": [] },
+        { "id": "imp_crucible", "name": "Imp Crucible", "cost": { "gold": 400, "wood": 5 }, "prerequisites": [], "produces": "imp" },
+        { "id": "hall_of_sins", "name": "Hall of Sins", "cost": { "gold": 1000, "wood": 5, "ore": 5 }, "prerequisites": ["imp_crucible"], "produces": "gog" },
+        { "id": "kennels", "name": "Kennels", "cost": { "gold": 1500, "wood": 5, "ore": 5 }, "prerequisites": ["imp_crucible"], "produces": "hell_hound" },
+        { "id": "demon_gate", "name": "Demon Gate", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["kennels"], "produces": "demon" },
+        { "id": "hell_hole", "name": "Hell Hole", "cost": { "gold": 4000, "wood": 5, "ore": 5 }, "prerequisites": ["demon_gate"], "produces": "pit_fiend" },
+        { "id": "fire_lake", "name": "Fire Lake", "cost": { "gold": 6000, "wood": 20, "ore": 20 }, "prerequisites": ["hell_hole"], "produces": "efreet" },
+        { "id": "forsaken_palace", "name": "Forsaken Palace", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["fire_lake"], "produces": "devil" }
+      ]
+    },
+    {
+      "id": "dungeon",
+      "name": "Dungeon",
+      "description": "Overlords ruling the subterranean depths.",
+      "primaryResource": "gold",
+      "buildings": [
+        { "id": "village_hall", "name": "Village Hall", "cost": { "gold": 0 }, "prerequisites": [], "income": { "gold": 500 } },
+        { "id": "town_hall", "name": "Town Hall", "cost": { "gold": 2500 }, "prerequisites": ["village_hall", "tavern"], "income": { "gold": 1000 } },
+        { "id": "tavern", "name": "Tavern", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [] },
+        { "id": "fort", "name": "Fort", "cost": { "gold": 2000, "wood": 20, "ore": 20 }, "prerequisites": ["tavern"] },
+        { "id": "mage_guild_1", "name": "Mage Guild Level 1", "cost": { "gold": 2000, "wood": 5, "ore": 5 }, "prerequisites": [] },
+        { "id": "warren", "name": "Warren", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "produces": "troglodyte" },
+        { "id": "harpy_loft", "name": "Harpy Loft", "cost": { "gold": 1000, "wood": 5, "ore": 5 }, "prerequisites": ["warren"], "produces": "harpy" },
+        { "id": "pillar_of_eyes", "name": "Pillar of Eyes", "cost": { "gold": 1500, "wood": 5, "ore": 5 }, "prerequisites": ["warren"], "produces": "beholder" },
+        { "id": "chapel_of_stilled_voices", "name": "Chapel of Stilled Voices", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["pillar_of_eyes"], "produces": "medusa" },
+        { "id": "labyrinth", "name": "Labyrinth", "cost": { "gold": 4000, "wood": 10, "ore": 10 }, "prerequisites": ["chapel_of_stilled_voices"], "produces": "minotaur" },
+        { "id": "manticore_lair", "name": "Manticore Lair", "cost": { "gold": 6000, "wood": 20, "ore": 20 }, "prerequisites": ["labyrinth"], "produces": "manticore" },
+        { "id": "dragon_cave", "name": "Dragon Cave", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["manticore_lair"], "produces": "red_dragon" }
+      ]
+    },
+    {
+      "id": "stronghold",
+      "name": "Stronghold",
+      "description": "Barbarian warriors of the rugged steppes.",
+      "primaryResource": "gold",
+      "buildings": [
+        { "id": "village_hall", "name": "Village Hall", "cost": { "gold": 0 }, "prerequisites": [], "income": { "gold": 500 } },
+        { "id": "town_hall", "name": "Town Hall", "cost": { "gold": 2500 }, "prerequisites": ["village_hall", "tavern"], "income": { "gold": 1000 } },
+        { "id": "tavern", "name": "Tavern", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [] },
+        { "id": "fort", "name": "Fort", "cost": { "gold": 2000, "wood": 20, "ore": 20 }, "prerequisites": ["tavern"] },
+        { "id": "mage_guild_1", "name": "Mage Guild Level 1", "cost": { "gold": 2000, "wood": 5, "ore": 5 }, "prerequisites": [] },
+        { "id": "goblin_barracks", "name": "Goblin Barracks", "cost": { "gold": 400, "wood": 5 }, "prerequisites": [], "produces": "goblin" },
+        { "id": "wolf_pen", "name": "Wolf Pen", "cost": { "gold": 1000, "wood": 5, "ore": 5 }, "prerequisites": ["goblin_barracks"], "produces": "wolf_rider" },
+        { "id": "orc_tower", "name": "Orc Tower", "cost": { "gold": 1500, "wood": 5, "ore": 5 }, "prerequisites": ["goblin_barracks"], "produces": "orc" },
+        { "id": "ogre_fort", "name": "Ogre Fort", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["orc_tower"], "produces": "ogre" },
+        { "id": "cliff_nest", "name": "Cliff Nest", "cost": { "gold": 4000, "wood": 10, "ore": 10 }, "prerequisites": ["ogre_fort"], "produces": "roc" },
+        { "id": "cyclops_cave", "name": "Cyclops Cave", "cost": { "gold": 5000, "wood": 20, "ore": 20 }, "prerequisites": ["cliff_nest"], "produces": "cyclops" },
+        { "id": "behemoth_lair", "name": "Behemoth Lair", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["cyclops_cave"], "produces": "behemoth" }
+      ]
+    },
+    {
+      "id": "fortress",
+      "name": "Fortress",
+      "description": "Beastmasters defending the treacherous swamplands.",
+      "primaryResource": "gold",
+      "buildings": [
+        { "id": "village_hall", "name": "Village Hall", "cost": { "gold": 0 }, "prerequisites": [], "income": { "gold": 500 } },
+        { "id": "town_hall", "name": "Town Hall", "cost": { "gold": 2500 }, "prerequisites": ["village_hall", "tavern"], "income": { "gold": 1000 } },
+        { "id": "tavern", "name": "Tavern", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [] },
+        { "id": "fort", "name": "Fort", "cost": { "gold": 2000, "wood": 20, "ore": 20 }, "prerequisites": ["tavern"] },
+        { "id": "mage_guild_1", "name": "Mage Guild Level 1", "cost": { "gold": 2000, "wood": 5, "ore": 5 }, "prerequisites": [] },
+        { "id": "gnoll_hut", "name": "Gnoll Hut", "cost": { "gold": 400, "wood": 5 }, "prerequisites": [], "produces": "gnoll" },
+        { "id": "lizard_den", "name": "Lizard Den", "cost": { "gold": 1000, "wood": 5, "ore": 5 }, "prerequisites": ["gnoll_hut"], "produces": "lizardman" },
+        { "id": "serpent_fly_hive", "name": "Serpent Fly Hive", "cost": { "gold": 1500, "wood": 5, "ore": 5 }, "prerequisites": ["gnoll_hut"], "produces": "serpent_fly" },
+        { "id": "basilisk_pit", "name": "Basilisk Pit", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["serpent_fly_hive"], "produces": "basilisk" },
+        { "id": "gorgon_lair", "name": "Gorgon Lair", "cost": { "gold": 4000, "wood": 10, "ore": 10 }, "prerequisites": ["basilisk_pit"], "produces": "gorgon" },
+        { "id": "wyvern_nest", "name": "Wyvern Nest", "cost": { "gold": 5000, "wood": 20, "ore": 20 }, "prerequisites": ["gorgon_lair"], "produces": "wyvern" },
+        { "id": "hydra_pond", "name": "Hydra Pond", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["wyvern_nest"], "produces": "hydra" }
+      ]
     }
   ]
 }
