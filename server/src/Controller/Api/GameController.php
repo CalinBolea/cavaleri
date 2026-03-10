@@ -77,24 +77,41 @@ class GameController extends AbstractController
     ];
 
     private const HERO_NAMES = [
+        // Castle
         'knight' => ['Sir Galahad', 'Lord Haart', 'Sorsha', 'Tyris'],
-        'wizard' => ['Sandro', 'Vidomina', 'Thant', 'Isra'],
+        'cleric' => ['Adela', 'Loynis', 'Caitlin', 'Rion'],
+        // Necropolis
+        'death_knight' => ['Lord Haart', 'Tamika', 'Straker', 'Clavius'],
+        'necromancer' => ['Sandro', 'Vidomina', 'Thant', 'Isra'],
+        // Rampart
         'ranger' => ['Jenova', 'Ryland', 'Mephala', 'Gelu'],
+        'druid' => ['Elleshar', 'Gem', 'Aeris', 'Coronius'],
+        // Tower
+        'alchemist' => ['Fafner', 'Neela', 'Josephine', 'Torosar'],
+        'wizard' => ['Solmyr', 'Cyra', 'Iona', 'Theodorus'],
+        // Inferno
         'demoniac' => ['Calh', 'Nymus', 'Rashka', 'Xeron'],
-        'overlord' => ['Gunnar', 'Lorelei', 'Mutare', 'Alamar'],
+        'heretic' => ['Ash', 'Zydar', 'Axsis', 'Olema'],
+        // Dungeon
+        'overlord' => ['Gunnar', 'Lorelei', 'Mutare', 'Shakti'],
+        'warlock' => ['Alamar', 'Jeddite', 'Deemer', 'Malekith'],
+        // Stronghold
         'barbarian' => ['Crag Hack', 'Gretchin', 'Shiva', 'Tyraxor'],
+        'battle_mage' => ['Gird', 'Oris', 'Saurug', 'Dessa'],
+        // Fortress
         'beastmaster' => ['Bron', 'Drakon', 'Tazar', 'Wystan'],
+        'witch' => ['Mirlanda', 'Rosic', 'Voy', 'Verdish'],
     ];
 
-    private const FACTION_HERO_CLASS = [
-        'castle' => 'knight',
-        'necropolis' => 'wizard',
-        'rampart' => 'ranger',
-        'tower' => 'wizard',
-        'inferno' => 'demoniac',
-        'dungeon' => 'overlord',
-        'stronghold' => 'barbarian',
-        'fortress' => 'beastmaster',
+    private const FACTION_HERO_CLASSES = [
+        'castle' => ['knight', 'cleric'],
+        'necropolis' => ['death_knight', 'necromancer'],
+        'rampart' => ['ranger', 'druid'],
+        'tower' => ['alchemist', 'wizard'],
+        'inferno' => ['demoniac', 'heretic'],
+        'dungeon' => ['overlord', 'warlock'],
+        'stronghold' => ['barbarian', 'battle_mage'],
+        'fortress' => ['beastmaster', 'witch'],
     ];
 
     #[Route('/games', name: 'api_games_create', methods: ['POST'])]
@@ -154,9 +171,10 @@ class GameController extends AbstractController
 
             // Create hero with faction-appropriate starting army
             $hero = new Hero();
-            $heroClassValue = self::FACTION_HERO_CLASS[$faction] ?? 'knight';
+            $classes = self::FACTION_HERO_CLASSES[$faction] ?? ['knight', 'cleric'];
+            $heroClassValue = $classes[array_rand($classes)];
             $heroClass = HeroClass::from($heroClassValue);
-            $names = self::HERO_NAMES[$heroClassValue] ?? self::HERO_NAMES['knight'];
+            $names = self::HERO_NAMES[$heroClassValue];
             $hero->setName($names[array_rand($names)]);
             $hero->setHeroClass($heroClass);
             $hero->setPosX($startPositions[$i][0]);

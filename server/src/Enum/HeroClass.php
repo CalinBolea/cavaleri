@@ -4,13 +4,30 @@ namespace App\Enum;
 
 enum HeroClass: string
 {
+    // Castle
     case Knight = 'knight';
-    case Wizard = 'wizard';
+    case Cleric = 'cleric';
+    // Necropolis
+    case DeathKnight = 'death_knight';
+    case Necromancer = 'necromancer';
+    // Rampart
     case Ranger = 'ranger';
+    case Druid = 'druid';
+    // Tower
+    case Alchemist = 'alchemist';
+    case Wizard = 'wizard';
+    // Inferno
     case Demoniac = 'demoniac';
+    case Heretic = 'heretic';
+    // Dungeon
     case Overlord = 'overlord';
+    case Warlock = 'warlock';
+    // Stronghold
     case Barbarian = 'barbarian';
+    case BattleMage = 'battle_mage';
+    // Fortress
     case Beastmaster = 'beastmaster';
+    case Witch = 'witch';
 
     /**
      * @return array{attack: int, defense: int, spellPower: int, knowledge: int}
@@ -18,13 +35,25 @@ enum HeroClass: string
     public function getStatGrowth(): array
     {
         return match ($this) {
-            self::Knight => ['attack' => 2, 'defense' => 2, 'spellPower' => 1, 'knowledge' => 1],
-            self::Wizard => ['attack' => 1, 'defense' => 1, 'spellPower' => 2, 'knowledge' => 2],
-            self::Ranger => ['attack' => 1, 'defense' => 2, 'spellPower' => 1, 'knowledge' => 1],
-            self::Demoniac => ['attack' => 2, 'defense' => 2, 'spellPower' => 1, 'knowledge' => 1],
-            self::Overlord => ['attack' => 2, 'defense' => 2, 'spellPower' => 1, 'knowledge' => 1],
-            self::Barbarian => ['attack' => 3, 'defense' => 1, 'spellPower' => 1, 'knowledge' => 1],
-            self::Beastmaster => ['attack' => 1, 'defense' => 3, 'spellPower' => 1, 'knowledge' => 1],
+            // Might classes
+            self::Knight,
+            self::DeathKnight,
+            self::Ranger,
+            self::Alchemist,
+            self::Demoniac,
+            self::Overlord,
+            self::Barbarian,
+            self::Beastmaster => ['attack' => 2, 'defense' => 2, 'spellPower' => 1, 'knowledge' => 1],
+
+            // Magic classes
+            self::Cleric,
+            self::Necromancer,
+            self::Druid,
+            self::Wizard,
+            self::Heretic,
+            self::Warlock,
+            self::BattleMage,
+            self::Witch => ['attack' => 1, 'defense' => 1, 'spellPower' => 2, 'knowledge' => 2],
         };
     }
 }
