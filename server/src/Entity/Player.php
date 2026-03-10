@@ -49,9 +49,14 @@ class Player
     #[ORM\OneToMany(targetEntity: Hero::class, mappedBy: 'player', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $heroes;
 
+    /** @var Collection<int, Town> */
+    #[ORM\OneToMany(targetEntity: Town::class, mappedBy: 'owner')]
+    private Collection $towns;
+
     public function __construct()
     {
         $this->heroes = new ArrayCollection();
+        $this->towns = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -145,6 +150,31 @@ class Player
         if ($this->heroes->removeElement($hero)) {
             if ($hero->getPlayer() === $this) {
                 $hero->setPlayer(null);
+            }
+        }
+        return $this;
+    }
+
+    /** @return Collection<int, Town> */
+    public function getTowns(): Collection
+    {
+        return $this->towns;
+    }
+
+    public function addTown(Town $town): static
+    {
+        if (!$this->towns->contains($town)) {
+            $this->towns->add($town);
+            $town->setOwner($this);
+        }
+        return $this;
+    }
+
+    public function removeTown(Town $town): static
+    {
+        if ($this->towns->removeElement($town)) {
+            if ($town->getOwner() === $this) {
+                $town->setOwner(null);
             }
         }
         return $this;

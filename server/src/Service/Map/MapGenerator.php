@@ -5,9 +5,9 @@ namespace App\Service\Map;
 class MapGenerator
 {
     public const MAP_SIZES = [
-        'S' => ['width' => 20, 'height' => 20, 'startPositions' => [[3, 3], [16, 16], [16, 3], [3, 16]], 'neutralStackCount' => 8],
-        'M' => ['width' => 36, 'height' => 36, 'startPositions' => [[3, 3], [32, 32], [32, 3], [3, 32]], 'neutralStackCount' => 16],
-        'L' => ['width' => 52, 'height' => 52, 'startPositions' => [[3, 3], [48, 48], [48, 3], [3, 48]], 'neutralStackCount' => 28],
+        'S' => ['width' => 20, 'height' => 20, 'startPositions' => [[3, 3], [16, 16], [16, 3], [3, 16]], 'neutralStackCount' => 8, 'neutralTownCount' => 2],
+        'M' => ['width' => 36, 'height' => 36, 'startPositions' => [[3, 3], [32, 32], [32, 3], [3, 32]], 'neutralStackCount' => 16, 'neutralTownCount' => 4],
+        'L' => ['width' => 52, 'height' => 52, 'startPositions' => [[3, 3], [48, 48], [48, 3], [3, 48]], 'neutralStackCount' => 28, 'neutralTownCount' => 6],
     ];
 
     /** @deprecated Use MAP_SIZES['S']['startPositions'] instead */
@@ -139,6 +139,68 @@ class MapGenerator
         }
 
         return $stacks;
+    }
+
+    public function generateNeutralTowns(array $mapData, int $count, array $startPositions, array $occupiedPositions = []): array
+    {
+        $height = count($mapData);
+        $width = count($mapData[0]);
+
+        $occupiedSet = [];
+        foreach ($occupiedPositions as $pos) {
+            $occupiedSet[$pos[0] . ',' . $pos[1]] = true;
+        }
+
+        $candidates = [];
+        for ($row = 0; $row < $height; $row++) {
+            for ($col = 0; $col < $width; $col++) {
+                $inClearZone = false;
+                foreach ($startPositions as [$startCol, $startRow]) {
+                    if (abs($col - $startCol) <= 2 && abs($row - $startRow) <= 2) {
+                        $inClearZone = true;
+                        break;
+                    }
+                }
+                if ($inClearZone) {
+                    continue;
+                }
+                if (isset($occupiedSet[$col . ',' . $row])) {
+                    continue;
+                }
+                if (self::isPassable($mapData[$row][$col])) {
+                    $candidates[] = ['posX' => $col, 'posY' => $row];
+                }
+            }
+        }
+
+        shuffle($candidates);
+
+        $factions = ['castle', 'necropolis'];
+        $selected = [];
+        foreach ($candidates as $pos) {
+            if (count($selected) >= $count) {
+                break;
+            }
+            // Enforce minimum 5-tile distance between towns
+            $tooClose = false;
+            foreach ($selected as $existing) {
+                $d = abs($pos['posX'] - $existing['posX']) + abs($pos['posY'] - $existing['posY']);
+                if ($d < 5) {
+                    $tooClose = true;
+                    break;
+                }
+            }
+            if ($tooClose) {
+                continue;
+            }
+            $selected[] = [
+                'posX' => $pos['posX'],
+                'posY' => $pos['posY'],
+                'factionId' => $factions[array_rand($factions)],
+            ];
+        }
+
+        return $selected;
     }
 
     public static function getMovementCost(string $terrain): int

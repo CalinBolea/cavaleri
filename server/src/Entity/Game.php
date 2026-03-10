@@ -52,6 +52,10 @@ class Game
     #[ORM\OneToMany(targetEntity: NeutralStack::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $neutralStacks;
 
+    /** @var Collection<int, Town> */
+    #[ORM\OneToMany(targetEntity: Town::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $towns;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -62,6 +66,7 @@ class Game
     {
         $this->players = new ArrayCollection();
         $this->neutralStacks = new ArrayCollection();
+        $this->towns = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -207,6 +212,31 @@ class Game
         return $this;
     }
 
+    /** @return Collection<int, Town> */
+    public function getTowns(): Collection
+    {
+        return $this->towns;
+    }
+
+    public function addTown(Town $town): static
+    {
+        if (!$this->towns->contains($town)) {
+            $this->towns->add($town);
+            $town->setGame($this);
+        }
+        return $this;
+    }
+
+    public function removeTown(Town $town): static
+    {
+        if ($this->towns->removeElement($town)) {
+            if ($town->getGame() === $this) {
+                $town->setGame(null);
+            }
+        }
+        return $this;
+    }
+
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
@@ -263,6 +293,7 @@ class Game
             'mapData' => $this->mapData,
             'players' => array_values(array_map(fn(Player $p) => $p->toArray(), $this->players->toArray())),
             'neutralStacks' => array_values(array_map(fn(NeutralStack $n) => $n->toArray(), $this->neutralStacks->toArray())),
+            'towns' => array_values(array_map(fn(Town $t) => $t->toArray(), $this->towns->toArray())),
             'createdAt' => $this->createdAt?->format(\DateTimeInterface::ATOM),
             'updatedAt' => $this->updatedAt?->format(\DateTimeInterface::ATOM),
         ];

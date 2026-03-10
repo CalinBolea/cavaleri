@@ -49,6 +49,14 @@ export interface NeutralStackData {
     quantity: number;
 }
 
+export interface TownData {
+    id: string;
+    posX: number;
+    posY: number;
+    factionId: string;
+    ownerId: string | null;
+}
+
 export interface CombatLoss {
     unitId: string;
     lost: number;
@@ -93,6 +101,7 @@ export interface GameState {
     mapData: string[][];
     players: PlayerData[];
     neutralStacks: NeutralStackData[];
+    towns: TownData[];
 }
 
 class GameStore {

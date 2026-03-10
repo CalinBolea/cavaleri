@@ -24,6 +24,11 @@ const UI_HEIGHT = 60;
 const ZOOM_LEVELS = [0.6, 1.0, 1.5];
 const DEFAULT_ZOOM_INDEX = 1;
 
+const FACTION_TOWN_COLORS: Record<string, number> = {
+    castle: 0xd4a843,
+    necropolis: 0x4a2d6b,
+};
+
 export class AdventureMapScene extends Phaser.Scene {
     private hexGraphics!: Phaser.GameObjects.Graphics;
     private heroGraphics!: Phaser.GameObjects.Graphics;
@@ -37,6 +42,8 @@ export class AdventureMapScene extends Phaser.Scene {
     private heroLabels: Phaser.GameObjects.Text[] = [];
     private neutralGraphics!: Phaser.GameObjects.Graphics;
     private neutralLabels: Phaser.GameObjects.Text[] = [];
+    private townGraphics!: Phaser.GameObjects.Graphics;
+    private townLabels: Phaser.GameObjects.Text[] = [];
     private armyTexts: Phaser.GameObjects.Text[] = [];
     private pendingTarget: { col: number; row: number } | null = null;
     private pathPreviewGraphics!: Phaser.GameObjects.Graphics;
@@ -91,6 +98,9 @@ export class AdventureMapScene extends Phaser.Scene {
         this.hexGraphics = this.add.graphics();
         this.mapContainer.add(this.hexGraphics);
 
+        this.townGraphics = this.add.graphics();
+        this.mapContainer.add(this.townGraphics);
+
         this.neutralGraphics = this.add.graphics();
         this.mapContainer.add(this.neutralGraphics);
 
@@ -106,6 +116,7 @@ export class AdventureMapScene extends Phaser.Scene {
         this.pendingTarget = null;
 
         this.drawMap(state);
+        this.drawTowns(state);
         this.drawNeutralStacks(state);
         this.drawHero(state);
         this.createUI(state);
@@ -277,6 +288,82 @@ export class AdventureMapScene extends Phaser.Scene {
                 this.drawHexagon(this.hexGraphics, x, y);
             }
         }
+    }
+
+    private drawTowns(state: GameState): void {
+        this.townGraphics.clear();
+        for (const label of this.townLabels) {
+            label.destroy();
+        }
+        this.townLabels = [];
+
+        if (!state.towns) return;
+
+        for (const town of state.towns) {
+            const { x, y } = this.hexToPixel(town.posX, town.posY);
+            const factionColor = FACTION_TOWN_COLORS[town.factionId] ?? 0x888888;
+
+            // Fill hex with faction color
+            this.townGraphics.fillStyle(factionColor, 0.6);
+            this.drawFilledHex(this.townGraphics, x, y);
+
+            // Building shape: rect base + triangle roof
+            const baseW = HEX_SIZE * 0.8;
+            const baseH = HEX_SIZE * 0.5;
+            this.townGraphics.fillStyle(factionColor, 1);
+            this.townGraphics.fillRect(x - baseW / 2, y - baseH / 2 + 2, baseW, baseH);
+
+            // Triangle roof
+            this.townGraphics.beginPath();
+            this.townGraphics.moveTo(x - baseW / 2 - 2, y - baseH / 2 + 2);
+            this.townGraphics.lineTo(x, y - baseH / 2 - 6);
+            this.townGraphics.lineTo(x + baseW / 2 + 2, y - baseH / 2 + 2);
+            this.townGraphics.closePath();
+            this.townGraphics.fillPath();
+
+            // Ownership border
+            if (town.ownerId) {
+                const owner = state.players.find(p => p.id === town.ownerId);
+                const borderColor = owner
+                    ? Phaser.Display.Color.HexStringToColor(owner.color).color
+                    : 0x888888;
+                this.townGraphics.lineStyle(2, borderColor, 1);
+            } else {
+                this.townGraphics.lineStyle(2, 0x888888, 0.8);
+            }
+            this.drawStrokedHex(this.townGraphics, x, y);
+
+            // Label
+            const label = this.add.text(x, y + HEX_SIZE * 0.8, this.capitalize(town.factionId), {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: '#ffffff',
+                fontStyle: 'bold',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 2,
+            }).setOrigin(0.5);
+            this.mapContainer.add(label);
+            this.townLabels.push(label);
+        }
+    }
+
+    private drawStrokedHex(graphics: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
+        const points: { x: number; y: number }[] = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 180) * (60 * i - 30);
+            points.push({
+                x: cx + HEX_SIZE * Math.cos(angle),
+                y: cy + HEX_SIZE * Math.sin(angle),
+            });
+        }
+        graphics.beginPath();
+        graphics.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < 6; i++) {
+            graphics.lineTo(points[i].x, points[i].y);
+        }
+        graphics.closePath();
+        graphics.strokePath();
     }
 
     private drawNeutralStacks(state: GameState): void {
@@ -832,7 +919,8 @@ export class AdventureMapScene extends Phaser.Scene {
             this.resourceTexts[key].setText(String(player.resources[key as keyof typeof player.resources]));
         }
 
-        // Redraw neutral stacks
+        // Redraw towns and neutral stacks
+        this.drawTowns(state);
         this.drawNeutralStacks(state);
 
         // Always redraw all heroes

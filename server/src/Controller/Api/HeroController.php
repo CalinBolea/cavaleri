@@ -6,6 +6,7 @@ use App\Entity\Game;
 use App\Repository\GameRepository;
 use App\Repository\HeroRepository;
 use App\Repository\NeutralStackRepository;
+use App\Repository\TownRepository;
 use App\Service\GameEngine\CombatService;
 use App\Service\GameEngine\TurnManager;
 use App\Service\Map\PathfindingService;
@@ -25,6 +26,7 @@ class HeroController extends AbstractController
         private HeroRepository $heroRepository,
         private PathfindingService $pathfindingService,
         private NeutralStackRepository $neutralStackRepository,
+        private TownRepository $townRepository,
         private CombatService $combatService,
         private TurnManager $turnManager,
     ) {
@@ -89,6 +91,14 @@ class HeroController extends AbstractController
         $hero->setPosX($targetX);
         $hero->setPosY($targetY);
         $hero->setMovementPoints($hero->getMovementPoints() - $cost);
+
+        // Check for town capture
+        $town = $this->townRepository->findByPosition($game, $targetX, $targetY);
+        $townCaptured = null;
+        if ($town && ($town->getOwner() === null || !$town->getOwner()->getId()->equals($hero->getPlayer()->getId()))) {
+            $town->setOwner($hero->getPlayer());
+            $townCaptured = $town->toArray();
+        }
 
         $combatData = null;
         $levelUpData = null;
@@ -326,6 +336,7 @@ class HeroController extends AbstractController
             'cost' => $cost,
             'combat' => $combatData,
             'levelUp' => $levelUpData,
+            'townCaptured' => $townCaptured,
             'game' => $game->toArray(),
         ]);
     }

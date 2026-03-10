@@ -7,6 +7,7 @@ use App\Entity\Game;
 use App\Entity\Hero;
 use App\Entity\NeutralStack;
 use App\Entity\Player;
+use App\Entity\Town;
 use App\Enum\HeroClass;
 use App\Repository\GameRepository;
 use App\Service\GameDataProvider;
@@ -137,6 +138,14 @@ class GameController extends AbstractController
             }
 
             $player->addHero($hero);
+
+            // Create player's starting town
+            $town = new Town();
+            $town->setPosX($startPositions[$i][0]);
+            $town->setPosY($startPositions[$i][1]);
+            $town->setFactionId($faction);
+            $town->setOwner($player);
+            $game->addTown($town);
         }
 
         // Generate neutral stacks
@@ -149,6 +158,17 @@ class GameController extends AbstractController
             $neutralStack->setUnitId($stackData['unitId']);
             $neutralStack->setQuantity($stackData['quantity']);
             $game->addNeutralStack($neutralStack);
+        }
+
+        // Generate neutral towns
+        $neutralStackPositions = array_map(fn($s) => [$s['posX'], $s['posY']], $neutralStackData);
+        $neutralTownData = $this->mapGenerator->generateNeutralTowns($mapData, $mapConfig['neutralTownCount'], $startPositions, $neutralStackPositions);
+        foreach ($neutralTownData as $td) {
+            $town = new Town();
+            $town->setPosX($td['posX']);
+            $town->setPosY($td['posY']);
+            $town->setFactionId($td['factionId']);
+            $game->addTown($town);
         }
 
         $this->em->persist($game);
