@@ -17,12 +17,17 @@ export interface ArmySlot {
 export interface HeroData {
     id: string;
     name: string;
+    heroClass: string;
     posX: number;
     posY: number;
     movementPoints: number;
     maxMovementPoints: number;
     attack: number;
     defense: number;
+    spellPower: number;
+    knowledge: number;
+    experience: number;
+    level: number;
     army: ArmySlot[];
 }
 
@@ -63,6 +68,17 @@ export interface CombatData {
     occurred: boolean;
     type: string;
     result: CombatResultData;
+}
+
+export interface LevelUpData {
+    levelsGained: number;
+    newLevel: number;
+    statGrowth: {
+        attack: number;
+        defense: number;
+        spellPower: number;
+        knowledge: number;
+    };
 }
 
 export interface GameState {

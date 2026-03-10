@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { gameStore, GameState } from '../state/GameStore';
 import { apiClient } from '../network/ApiClient';
 import { CombatResultDialog } from '../ui/CombatResultDialog';
+import { HeroDetailsDialog } from '../ui/HeroDetailsDialog';
+import { LevelUpDialog } from '../ui/LevelUpDialog';
 import { findPath, getPathCost } from '../utils/pathfinding';
 
 const HEX_SIZE = 20;
@@ -29,6 +31,7 @@ export class AdventureMapScene extends Phaser.Scene {
     private isMoving = false;
     private dayText!: Phaser.GameObjects.Text;
     private movementText!: Phaser.GameObjects.Text;
+    private levelText!: Phaser.GameObjects.Text;
     private resourceTexts: Record<string, Phaser.GameObjects.Text> = {};
     private hoverGraphics!: Phaser.GameObjects.Graphics;
     private heroLabels: Phaser.GameObjects.Text[] = [];
@@ -131,6 +134,7 @@ export class AdventureMapScene extends Phaser.Scene {
 
         // Unified tap/drag input handling
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (this.isMoving) return;
             // Skip if second finger is down (pinch gesture)
             if (this.input.pointer1.isDown && this.input.pointer2.isDown) return;
 
@@ -168,12 +172,13 @@ export class AdventureMapScene extends Phaser.Scene {
                 this.hoverGraphics.clear();
                 return;
             }
-            if (!this.isDragging) {
+            if (!this.isDragging && !this.isMoving) {
                 this.handleHover(pointer);
             }
         });
 
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+            if (this.isMoving) return;
             if (!this.pointerIsDown) return;
             this.pointerIsDown = false;
 
@@ -407,8 +412,15 @@ export class AdventureMapScene extends Phaser.Scene {
             color: player.color,
         }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0));
 
+        // Level & XP
+        this.levelText = this.addUI(this.add.text(width - 440, 20, `Lv.${hero.level} (${hero.experience} XP)`, {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#c4a44e',
+        }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
+
         // Movement points
-        this.movementText = this.addUI(this.add.text(width - 380, 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
+        this.movementText = this.addUI(this.add.text(width - 320, 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#88cc88',
@@ -553,6 +565,37 @@ export class AdventureMapScene extends Phaser.Scene {
         zoomMinusBg.on('pointerover', () => zoomMinusBg.setFillStyle(0x3a3a5a));
         zoomMinusBg.on('pointerout', () => zoomMinusBg.setFillStyle(0x2a2a4a));
         zoomMinusBg.on('pointerdown', () => this.setZoomLevel(this.zoomIndex - 1));
+
+        // Hero details button below zoom buttons
+        const heroY = zoomY + btnHeight + btnGap;
+        const heroBtnBg = this.addUI(this.add.rectangle(
+            panelX + panelWidth / 2, heroY,
+            panelWidth - 10, btnHeight, 0x2a2a4a,
+        ).setStrokeStyle(2, 0xc4a44e)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(101).setScrollFactor(0));
+
+        this.addUI(this.add.text(
+            panelX + panelWidth / 2, heroY, '\u{1F6E1} Hero', {
+                fontFamily: 'serif',
+                fontSize: '16px',
+                color: '#c4a44e',
+            }).setOrigin(0.5).setDepth(102).setScrollFactor(0));
+
+        heroBtnBg.on('pointerover', () => heroBtnBg.setFillStyle(0x3a3a5a));
+        heroBtnBg.on('pointerout', () => heroBtnBg.setFillStyle(0x2a2a4a));
+        heroBtnBg.on('pointerdown', async () => {
+            const hero = gameStore.getSelectedHero();
+            if (!hero) return;
+            const dialog = new HeroDetailsDialog(this, hero);
+            dialog.show();
+            this.isMoving = true;
+            try {
+                await dialog.waitForDismissal();
+            } finally {
+                this.isMoving = false;
+            }
+        });
     }
 
     private async handleMapClick(pointer: Phaser.Input.Pointer): Promise<void> {
@@ -611,6 +654,12 @@ export class AdventureMapScene extends Phaser.Scene {
                 const dialog = new CombatResultDialog(this, result.combat.result);
                 dialog.show();
                 await dialog.waitForDismissal();
+            }
+
+            if (result.levelUp) {
+                const levelDialog = new LevelUpDialog(this, result.levelUp);
+                levelDialog.show();
+                await levelDialog.waitForDismissal();
             }
 
             this.refreshDisplay();
@@ -790,6 +839,8 @@ export class AdventureMapScene extends Phaser.Scene {
         this.drawHero(state);
 
         if (hero) {
+            // Update level & XP
+            this.levelText.setText(`Lv.${hero.level} (${hero.experience} XP)`);
             // Update movement points
             this.movementText.setText(`MP: ${hero.movementPoints}/${hero.maxMovementPoints}`);
             // Update army panel
@@ -803,6 +854,7 @@ export class AdventureMapScene extends Phaser.Scene {
                 }
             }
         } else {
+            this.levelText.setText('Lv.--');
             this.movementText.setText('MP: --');
             for (const txt of this.armyTexts) {
                 txt.setVisible(false);

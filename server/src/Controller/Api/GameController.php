@@ -7,6 +7,7 @@ use App\Entity\Game;
 use App\Entity\Hero;
 use App\Entity\NeutralStack;
 use App\Entity\Player;
+use App\Enum\HeroClass;
 use App\Repository\GameRepository;
 use App\Service\GameDataProvider;
 use App\Service\GameEngine\TurnManager;
@@ -50,9 +51,15 @@ class GameController extends AbstractController
         ],
     ];
 
-    private const FACTION_HERO_NAMES = [
-        'castle' => 'Lord Haart',
-        'necropolis' => 'Lord Haart',
+    private const HERO_NAMES = [
+        'knight' => ['Sir Galahad', 'Lord Haart', 'Sorsha', 'Tyris'],
+        'wizard' => ['Sandro', 'Vidomina', 'Thant', 'Isra'],
+        'ranger' => ['Jenova', 'Ryland', 'Mephala', 'Gelu'],
+    ];
+
+    private const FACTION_HERO_CLASS = [
+        'castle' => 'knight',
+        'necropolis' => 'wizard',
     ];
 
     #[Route('/games', name: 'api_games_create', methods: ['POST'])]
@@ -112,8 +119,11 @@ class GameController extends AbstractController
 
             // Create hero with faction-appropriate starting army
             $hero = new Hero();
-            $hero->setName(self::FACTION_HERO_NAMES[$faction] ?? 'Lord Haart');
-            $hero->setHeroClass('knight');
+            $heroClassValue = self::FACTION_HERO_CLASS[$faction] ?? 'knight';
+            $heroClass = HeroClass::from($heroClassValue);
+            $names = self::HERO_NAMES[$heroClassValue] ?? self::HERO_NAMES['knight'];
+            $hero->setName($names[array_rand($names)]);
+            $hero->setHeroClass($heroClass);
             $hero->setPosX($startPositions[$i][0]);
             $hero->setPosY($startPositions[$i][1]);
 

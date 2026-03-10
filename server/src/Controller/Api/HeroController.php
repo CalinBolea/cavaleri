@@ -91,6 +91,7 @@ class HeroController extends AbstractController
         $hero->setMovementPoints($hero->getMovementPoints() - $cost);
 
         $combatData = null;
+        $levelUpData = null;
 
         // Check for neutral stack encounter
         $neutralStack = $this->neutralStackRepository->findByPosition($game, $targetX, $targetY);
@@ -139,7 +140,20 @@ class HeroController extends AbstractController
                 }
 
                 // Add XP
-                $hero->setExperience($hero->getExperience() + $result->experienceGained);
+                $levelUpResult = $hero->addExperience($result->experienceGained);
+                if ($levelUpResult['levelsGained'] > 0) {
+                    $growth = $hero->getHeroClass()->getStatGrowth();
+                    $levelUpData = [
+                        'levelsGained' => $levelUpResult['levelsGained'],
+                        'newLevel' => $levelUpResult['newLevel'],
+                        'statGrowth' => [
+                            'attack' => $growth['attack'] * $levelUpResult['levelsGained'],
+                            'defense' => $growth['defense'] * $levelUpResult['levelsGained'],
+                            'spellPower' => $growth['spellPower'] * $levelUpResult['levelsGained'],
+                            'knowledge' => $growth['knowledge'] * $levelUpResult['levelsGained'],
+                        ],
+                    ];
+                }
             } else {
                 // Attacker lost: reset hero to penultimate path step
                 if (count($path) >= 2) {
@@ -239,7 +253,20 @@ class HeroController extends AbstractController
                                 }
                             }
 
-                            $hero->setExperience($hero->getExperience() + $result->experienceGained);
+                            $levelUpResult = $hero->addExperience($result->experienceGained);
+                            if ($levelUpResult['levelsGained'] > 0) {
+                                $growth = $hero->getHeroClass()->getStatGrowth();
+                                $levelUpData = [
+                                    'levelsGained' => $levelUpResult['levelsGained'],
+                                    'newLevel' => $levelUpResult['newLevel'],
+                                    'statGrowth' => [
+                                        'attack' => $growth['attack'] * $levelUpResult['levelsGained'],
+                                        'defense' => $growth['defense'] * $levelUpResult['levelsGained'],
+                                        'spellPower' => $growth['spellPower'] * $levelUpResult['levelsGained'],
+                                        'knowledge' => $growth['knowledge'] * $levelUpResult['levelsGained'],
+                                    ],
+                                ];
+                            }
 
                             $this->checkWinCondition($game);
                         } else {
@@ -298,6 +325,7 @@ class HeroController extends AbstractController
             'path' => $path,
             'cost' => $cost,
             'combat' => $combatData,
+            'levelUp' => $levelUpData,
             'game' => $game->toArray(),
         ]);
     }

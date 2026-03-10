@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\HeroClass;
 use App\Repository\HeroRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -25,8 +26,8 @@ class Hero
     #[ORM\Column(type: Types::STRING, length: 100)]
     private string $name;
 
-    #[ORM\Column(type: Types::STRING, length: 50)]
-    private string $heroClass = 'knight';
+    #[ORM\Column(type: Types::STRING, length: 50, enumType: HeroClass::class)]
+    private HeroClass $heroClass = HeroClass::Knight;
 
     #[ORM\Column(type: Types::INTEGER)]
     private int $posX;
@@ -94,12 +95,12 @@ class Hero
         return $this;
     }
 
-    public function getHeroClass(): string
+    public function getHeroClass(): HeroClass
     {
         return $this->heroClass;
     }
 
-    public function setHeroClass(string $heroClass): static
+    public function setHeroClass(HeroClass $heroClass): static
     {
         $this->heroClass = $heroClass;
         return $this;
@@ -215,6 +216,32 @@ class Hero
         return $this;
     }
 
+    /**
+     * @return array{levelsGained: int, newLevel: int}
+     */
+    public function addExperience(int $xp): array
+    {
+        $this->experience += $xp;
+        $levelsGained = 0;
+
+        while ($this->level < 50 && $this->experience >= 100 * ($this->level + 1) * ($this->level + 1)) {
+            $this->level++;
+            $levelsGained++;
+
+            $growth = $this->heroClass->getStatGrowth();
+            $this->attack += $growth['attack'];
+            $this->defense += $growth['defense'];
+            $this->spellPower += $growth['spellPower'];
+            $this->knowledge += $growth['knowledge'];
+
+            if ($this->level % 5 === 0) {
+                $this->maxMovementPoints += 2;
+            }
+        }
+
+        return ['levelsGained' => $levelsGained, 'newLevel' => $this->level];
+    }
+
     /** @return Collection<int, ArmySlot> */
     public function getArmySlots(): Collection
     {
@@ -245,7 +272,7 @@ class Hero
         return [
             'id' => $this->id?->toRfc4122(),
             'name' => $this->name,
-            'heroClass' => $this->heroClass,
+            'heroClass' => $this->heroClass->value,
             'posX' => $this->posX,
             'posY' => $this->posY,
             'movementPoints' => $this->movementPoints,
