@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { LevelUpData } from '../state/GameStore';
+import { s, fs } from '../utils/uiScale';
 
 export class LevelUpDialog {
     private container: Phaser.GameObjects.Container;
@@ -18,8 +19,8 @@ export class LevelUpDialog {
         this.container.add(overlay);
 
         // Panel
-        const panelW = 380;
-        const panelH = 340;
+        const panelW = Math.min(s(380), width - 20);
+        const panelH = Math.min(s(340), height - 20);
         const cx = width / 2;
         const cy = height / 2;
 
@@ -30,7 +31,7 @@ export class LevelUpDialog {
         // Title
         const title = this.scene.add.text(cx, cy - 130, 'Level Up!', {
             fontFamily: 'serif',
-            fontSize: '32px',
+            fontSize: fs(32),
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -39,7 +40,7 @@ export class LevelUpDialog {
         // New level
         const levelText = this.scene.add.text(cx, cy - 85, `Level ${this.data.newLevel}`, {
             fontFamily: 'Arial',
-            fontSize: '22px',
+            fontSize: fs(22),
             color: '#ffffff',
             fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -58,7 +59,7 @@ export class LevelUpDialog {
             if (value <= 0) continue;
             const t = this.scene.add.text(cx, yOff, `+${value} ${name}`, {
                 fontFamily: 'Arial',
-                fontSize: '18px',
+                fontSize: fs(18),
                 color: '#44cc44',
             }).setOrigin(0.5);
             this.container.add(t);
@@ -69,7 +70,7 @@ export class LevelUpDialog {
         if (this.data.newLevel % 5 === 0) {
             const movText = this.scene.add.text(cx, yOff, '+2 Max Movement', {
                 fontFamily: 'Arial',
-                fontSize: '18px',
+                fontSize: fs(18),
                 color: '#aaccff',
             }).setOrigin(0.5);
             this.container.add(movText);
@@ -77,14 +78,14 @@ export class LevelUpDialog {
         }
 
         // Continue button
-        const btnBg = this.scene.add.rectangle(cx, cy + 130, 160, 40, 0x2a2a4a)
+        const btnBg = this.scene.add.rectangle(cx, cy + 130, s(160), s(40), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true });
         this.container.add(btnBg);
 
         const btnText = this.scene.add.text(cx, cy + 130, 'Continue', {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: fs(18),
             color: '#c4a44e',
         }).setOrigin(0.5);
         this.container.add(btnText);

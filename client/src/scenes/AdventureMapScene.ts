@@ -5,6 +5,7 @@ import { CombatResultDialog } from '../ui/CombatResultDialog';
 import { HeroDetailsDialog } from '../ui/HeroDetailsDialog';
 import { LevelUpDialog } from '../ui/LevelUpDialog';
 import { findPath, getPathCost } from '../utils/pathfinding';
+import { IS_MOBILE, s, fs } from '../utils/uiScale';
 
 const HEX_SIZE = 20;
 const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
@@ -19,7 +20,7 @@ const TERRAIN_COLORS: Record<string, number> = {
     mountain: 0x666666,
 };
 
-const UI_HEIGHT = 60;
+const UI_HEIGHT = IS_MOBILE ? s(70) : 60;
 
 const ZOOM_LEVELS = [0.6, 1.0, 1.5];
 const DEFAULT_ZOOM_INDEX = 1;
@@ -472,24 +473,24 @@ export class AdventureMapScene extends Phaser.Scene {
         for (const { key, label, color } of resourceLabels) {
             this.addUI(this.add.text(xPos, 10, label + ':', {
                 fontFamily: 'Arial',
-                fontSize: '14px',
+                fontSize: fs(14),
                 color: '#aaaaaa',
             }).setDepth(101).setScrollFactor(0));
 
             this.resourceTexts[key] = this.addUI(this.add.text(xPos, 30, String(resources[key as keyof typeof resources]), {
                 fontFamily: 'Arial',
-                fontSize: '16px',
+                fontSize: fs(16),
                 color: color,
                 fontStyle: 'bold',
             }).setDepth(101).setScrollFactor(0));
 
-            xPos += 100;
+            xPos += s(90);
         }
 
         // Day counter
         this.dayText = this.addUI(this.add.text(width / 2, 12, this.getDayString(state), {
             fontFamily: 'serif',
-            fontSize: '16px',
+            fontSize: fs(16),
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
@@ -501,26 +502,27 @@ export class AdventureMapScene extends Phaser.Scene {
 
         this.playerIndicator = this.addUI(this.add.text(width / 2 - 38, 38, player.name, {
             fontFamily: 'serif',
-            fontSize: '14px',
+            fontSize: fs(14),
             color: player.color,
         }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0));
 
         // Level & XP
-        this.levelText = this.addUI(this.add.text(width - 440, 20, `Lv.${hero.level} (${hero.experience} XP)`, {
+        const lvMpX = IS_MOBILE ? width - 380 : width - 440;
+        this.levelText = this.addUI(this.add.text(lvMpX, 20, `Lv.${hero.level} (${hero.experience} XP)`, {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: fs(14),
             color: '#c4a44e',
         }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
 
         // Movement points
-        this.movementText = this.addUI(this.add.text(width - 320, 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
+        this.movementText = this.addUI(this.add.text(IS_MOBILE ? lvMpX : width - 320, IS_MOBILE ? 42 : 20, `MP: ${hero.movementPoints}/${hero.maxMovementPoints}`, {
             fontFamily: 'Arial',
-            fontSize: '16px',
+            fontSize: fs(16),
             color: '#88cc88',
         }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
 
         // End Turn button
-        const endTurnBg = this.addUI(this.add.rectangle(width - 100, UI_HEIGHT / 2, 140, 40, 0x2a2a4a)
+        const endTurnBg = this.addUI(this.add.rectangle(width - 100, UI_HEIGHT / 2, s(140), s(40), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true })
             .setDepth(101)
@@ -528,7 +530,7 @@ export class AdventureMapScene extends Phaser.Scene {
 
         this.addUI(this.add.text(width - 100, UI_HEIGHT / 2, 'End Turn', {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: fs(18),
             color: '#c4a44e',
         }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
 
@@ -537,7 +539,7 @@ export class AdventureMapScene extends Phaser.Scene {
         endTurnBg.on('pointerdown', () => this.handleEndTurn());
 
         // Quit button
-        const quitBg = this.addUI(this.add.rectangle(width - 240, UI_HEIGHT / 2, 80, 40, 0x2a2a4a)
+        const quitBg = this.addUI(this.add.rectangle(width - 240, UI_HEIGHT / 2, s(80), s(40), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true })
             .setDepth(101)
@@ -545,7 +547,7 @@ export class AdventureMapScene extends Phaser.Scene {
 
         this.addUI(this.add.text(width - 240, UI_HEIGHT / 2, 'Quit', {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: fs(18),
             color: '#c4a44e',
         }).setOrigin(0.5).setDepth(101).setScrollFactor(0));
 
@@ -555,7 +557,7 @@ export class AdventureMapScene extends Phaser.Scene {
 
         // Bottom army panel
         const { height } = this.cameras.main;
-        const panelHeight = 50;
+        const panelHeight = s(50);
 
         this.addUI(this.add.rectangle(width / 2, height - panelHeight / 2, width, panelHeight, 0x1a1a2e, 0.95)
             .setDepth(100)
@@ -576,7 +578,7 @@ export class AdventureMapScene extends Phaser.Scene {
                     `${this.capitalize(slot.unitId)} x${slot.quantity}`,
                     {
                         fontFamily: 'Arial',
-                        fontSize: '14px',
+                        fontSize: fs(14),
                         color: '#ffffff',
                         fontStyle: 'bold',
                     },
@@ -597,32 +599,35 @@ export class AdventureMapScene extends Phaser.Scene {
         const panelX = width - panelWidth - 10;
         const panelY = UI_HEIGHT + 10;
 
-        this.addUI(this.add.rectangle(
-            panelX + panelWidth / 2, panelY + panelHeight / 2,
-            panelWidth, panelHeight, 0x1a1a2e, 0.9,
-        ).setDepth(101).setScrollFactor(0));
-
-        for (let i = 0; i < entries.length; i++) {
-            const [terrain, color] = entries[i];
-            const y = panelY + padding + i * rowHeight + rowHeight / 2;
-
+        // Hide terrain legend on mobile to save space
+        if (!IS_MOBILE) {
             this.addUI(this.add.rectangle(
-                panelX + padding + swatchSize / 2, y,
-                swatchSize, swatchSize, color,
+                panelX + panelWidth / 2, panelY + panelHeight / 2,
+                panelWidth, panelHeight, 0x1a1a2e, 0.9,
             ).setDepth(101).setScrollFactor(0));
 
-            this.addUI(this.add.text(panelX + padding + swatchSize + 6, y, this.capitalize(terrain), {
-                fontFamily: 'Arial',
-                fontSize: '11px',
-                color: '#ffffff',
-            }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0));
+            for (let i = 0; i < entries.length; i++) {
+                const [terrain, color] = entries[i];
+                const y = panelY + padding + i * rowHeight + rowHeight / 2;
+
+                this.addUI(this.add.rectangle(
+                    panelX + padding + swatchSize / 2, y,
+                    swatchSize, swatchSize, color,
+                ).setDepth(101).setScrollFactor(0));
+
+                this.addUI(this.add.text(panelX + padding + swatchSize + 6, y, this.capitalize(terrain), {
+                    fontFamily: 'Arial',
+                    fontSize: '11px',
+                    color: '#ffffff',
+                }).setOrigin(0, 0.5).setDepth(101).setScrollFactor(0));
+            }
         }
 
-        // Zoom buttons below legend
-        const btnWidth = 40;
-        const btnHeight = 30;
+        // Zoom buttons below legend (or directly below HUD on mobile)
+        const btnWidth = s(40);
+        const btnHeight = s(30);
         const btnGap = 6;
-        const zoomY = panelY + panelHeight + btnGap + btnHeight / 2;
+        const zoomY = (IS_MOBILE ? panelY : panelY + panelHeight) + btnGap + btnHeight / 2;
         const zoomPlusBg = this.addUI(this.add.rectangle(
             panelX + panelWidth / 2 - btnWidth / 2 - btnGap / 2, zoomY,
             btnWidth, btnHeight, 0x2a2a4a,
@@ -633,7 +638,7 @@ export class AdventureMapScene extends Phaser.Scene {
         this.addUI(this.add.text(
             panelX + panelWidth / 2 - btnWidth / 2 - btnGap / 2, zoomY, '+', {
                 fontFamily: 'serif',
-                fontSize: '20px',
+                fontSize: fs(20),
                 color: '#c4a44e',
             }).setOrigin(0.5).setDepth(102).setScrollFactor(0));
 
@@ -651,7 +656,7 @@ export class AdventureMapScene extends Phaser.Scene {
         this.addUI(this.add.text(
             panelX + panelWidth / 2 + btnWidth / 2 + btnGap / 2, zoomY, '\u2212', {
                 fontFamily: 'serif',
-                fontSize: '20px',
+                fontSize: fs(20),
                 color: '#c4a44e',
             }).setOrigin(0.5).setDepth(102).setScrollFactor(0));
 
@@ -663,7 +668,7 @@ export class AdventureMapScene extends Phaser.Scene {
         const heroY = zoomY + btnHeight + btnGap;
         const heroBtnBg = this.addUI(this.add.rectangle(
             panelX + panelWidth / 2, heroY,
-            panelWidth - 10, btnHeight, 0x2a2a4a,
+            s(90), s(30), 0x2a2a4a,
         ).setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true })
             .setDepth(101).setScrollFactor(0));
@@ -671,7 +676,7 @@ export class AdventureMapScene extends Phaser.Scene {
         this.addUI(this.add.text(
             panelX + panelWidth / 2, heroY, '\u{1F6E1} Hero', {
                 fontFamily: 'serif',
-                fontSize: '16px',
+                fontSize: fs(16),
                 color: '#c4a44e',
             }).setOrigin(0.5).setDepth(102).setScrollFactor(0));
 

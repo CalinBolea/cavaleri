@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { apiClient, GameSummary, PlayerConfig } from '../network/ApiClient';
 import { gameStore } from '../state/GameStore';
+import { s, fs } from '../utils/uiScale';
 
 export class MainMenuScene extends Phaser.Scene {
     private mainButtons: Phaser.GameObjects.GameObject[] = [];
@@ -18,14 +19,14 @@ export class MainMenuScene extends Phaser.Scene {
         // Title
         this.add.text(width / 2, height / 3, 'CAVALERI', {
             fontFamily: 'serif',
-            fontSize: '72px',
+            fontSize: fs(72),
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
         this.add.text(width / 2, height / 3 + 60, 'Heroes of Might and Magic', {
             fontFamily: 'serif',
-            fontSize: '24px',
+            fontSize: fs(24),
             color: '#8a8a8a',
         }).setOrigin(0.5);
 
@@ -36,13 +37,13 @@ export class MainMenuScene extends Phaser.Scene {
         const { width, height } = this.cameras.main;
 
         // New Game button
-        const newGameBg = this.add.rectangle(width / 2, height / 2 + 60, 240, 56, 0x2a2a4a)
+        const newGameBg = this.add.rectangle(width / 2, height / 2 + 60, s(240), s(56), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true });
 
         const newGameText = this.add.text(width / 2, height / 2 + 60, 'New Game', {
             fontFamily: 'serif',
-            fontSize: '28px',
+            fontSize: fs(28),
             color: '#c4a44e',
         }).setOrigin(0.5);
 
@@ -51,13 +52,13 @@ export class MainMenuScene extends Phaser.Scene {
         newGameBg.on('pointerdown', () => this.showNewGamePanel());
 
         // Load Game button
-        const loadGameBg = this.add.rectangle(width / 2, height / 2 + 130, 240, 56, 0x2a2a4a)
+        const loadGameBg = this.add.rectangle(width / 2, height / 2 + 130, s(240), s(56), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true });
 
         this.add.text(width / 2, height / 2 + 130, 'Load Game', {
             fontFamily: 'serif',
-            fontSize: '28px',
+            fontSize: fs(28),
             color: '#c4a44e',
         }).setOrigin(0.5);
 
@@ -94,8 +95,8 @@ export class MainMenuScene extends Phaser.Scene {
         const { width, height } = this.cameras.main;
         this.setupContainer = this.add.container(0, 0);
 
-        const panelW = 500;
-        const panelH = 450;
+        const panelW = Math.min(s(500), width - 40);
+        const panelH = Math.min(s(450), height - 40);
         const panelX = width / 2;
         const panelY = height / 2;
 
@@ -132,7 +133,7 @@ export class MainMenuScene extends Phaser.Scene {
 
         for (let n = 1; n <= 4; n++) {
             const bx = panelX + 20 + (n - 1) * 50;
-            const bg = this.add.rectangle(bx, countLabelY, 40, 36, n === playerCount ? 0xc4a44e : 0x2a2a4a)
+            const bg = this.add.rectangle(bx, countLabelY, s(40), s(36), n === playerCount ? 0xc4a44e : 0x2a2a4a)
                 .setStrokeStyle(1, 0xc4a44e)
                 .setInteractive({ useHandCursor: true });
             const txt = this.add.text(bx, countLabelY, String(n), {
@@ -168,15 +169,15 @@ export class MainMenuScene extends Phaser.Scene {
         const sizeButtons: Phaser.GameObjects.Rectangle[] = [];
         const sizeTexts: Phaser.GameObjects.Text[] = [];
 
-        for (let s = 0; s < mapSizes.length; s++) {
-            const size = mapSizes[s];
-            const bx = panelX + 20 + s * 60;
-            const bg = this.add.rectangle(bx, sizeLabelY, 50, 36, size === selectedMapSize ? 0xc4a44e : 0x2a2a4a)
+        for (let si = 0; si < mapSizes.length; si++) {
+            const size = mapSizes[si];
+            const bx = panelX + 20 + si * 60;
+            const bg = this.add.rectangle(bx, sizeLabelY, s(50), s(36), size === selectedMapSize ? 0xc4a44e : 0x2a2a4a)
                 .setStrokeStyle(1, 0xc4a44e)
                 .setInteractive({ useHandCursor: true });
             const txt = this.add.text(bx, sizeLabelY, mapSizeLabels[size], {
                 fontFamily: 'serif',
-                fontSize: '14px',
+                fontSize: fs(14),
                 color: size === selectedMapSize ? '#000000' : '#c4a44e',
             }).setOrigin(0.5);
             this.setupContainer.add(bg);
@@ -219,8 +220,8 @@ export class MainMenuScene extends Phaser.Scene {
             dropdownContainer.add(blocker);
             blocker.on('pointerdown', () => destroyDropdown());
 
-            const rowW = 160;
-            const rowH = 30;
+            const rowW = s(160);
+            const rowH = s(30);
 
             for (let f = 0; f < factions.length; f++) {
                 const ry = btnY + 18 + f * rowH + rowH / 2;
@@ -233,7 +234,7 @@ export class MainMenuScene extends Phaser.Scene {
 
                 const rowText = this.add.text(btnX, ry, this.capitalize(factions[f]), {
                     fontFamily: 'serif',
-                    fontSize: '14px',
+                    fontSize: fs(14),
                     color: isSelected ? '#000000' : '#c4a44e',
                 }).setOrigin(0.5);
                 dropdownContainer.add(rowText);
@@ -267,7 +268,7 @@ export class MainMenuScene extends Phaser.Scene {
                 }).setOrigin(0, 0.5);
                 rowsContainer.add(nameText);
 
-                const factionBg = this.add.rectangle(panelX + 80, rowY, 160, 36, 0x2a2a4a)
+                const factionBg = this.add.rectangle(panelX + 80, rowY, s(160), s(36), 0x2a2a4a)
                     .setStrokeStyle(1, 0xc4a44e)
                     .setInteractive({ useHandCursor: true });
                 rowsContainer.add(factionBg);
@@ -292,14 +293,14 @@ export class MainMenuScene extends Phaser.Scene {
 
         // Start button
         const startY = panelY + panelH / 2 - 85;
-        const startBg = this.add.rectangle(panelX, startY, 160, 44, 0x2a2a4a)
+        const startBg = this.add.rectangle(panelX, startY, s(160), s(44), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true });
         this.setupContainer.add(startBg);
 
         const startText = this.add.text(panelX, startY, 'Start', {
             fontFamily: 'serif',
-            fontSize: '22px',
+            fontSize: fs(18),
             color: '#c4a44e',
         }).setOrigin(0.5);
         this.setupContainer.add(startText);
@@ -329,14 +330,14 @@ export class MainMenuScene extends Phaser.Scene {
 
         // Back button
         const backY = panelY + panelH / 2 - 30;
-        const backBg = this.add.rectangle(panelX, backY, 120, 40, 0x2a2a4a)
+        const backBg = this.add.rectangle(panelX, backY, s(120), s(40), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true });
         this.setupContainer.add(backBg);
 
         const backText = this.add.text(panelX, backY, 'Back', {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: fs(18),
             color: '#c4a44e',
         }).setOrigin(0.5);
         this.setupContainer.add(backText);
@@ -421,7 +422,7 @@ export class MainMenuScene extends Phaser.Scene {
                 return;
             }
 
-            const rowH = 50;
+            const rowH = s(50);
             const rowW = 460;
             const startY = panelY - panelH / 2 + 80;
             const maxRows = Math.min(games.length, 6);
@@ -457,7 +458,7 @@ export class MainMenuScene extends Phaser.Scene {
 
                 // Delete button
                 const delBtnX = panelX + rowW / 2 - 20;
-                const delBg = this.add.rectangle(delBtnX, rowY, 30, 30, 0x661a1a)
+                const delBg = this.add.rectangle(delBtnX, rowY, Math.max(s(30), 44), Math.max(s(30), 44), 0x661a1a)
                     .setStrokeStyle(1, 0xcc3333)
                     .setInteractive({ useHandCursor: true })
                     .setDepth(1);

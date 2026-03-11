@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HeroData } from '../state/GameStore';
+import { s, fs } from '../utils/uiScale';
 
 export class HeroDetailsDialog {
     private container: Phaser.GameObjects.Container;
@@ -18,8 +19,8 @@ export class HeroDetailsDialog {
         this.container.add(overlay);
 
         // Panel
-        const panelW = 450;
-        const panelH = 480;
+        const panelW = Math.min(s(450), width - 20);
+        const panelH = Math.min(s(480), height - 20);
         const cx = width / 2;
         const cy = height / 2;
 
@@ -32,7 +33,7 @@ export class HeroDetailsDialog {
         // Title: Hero name + class
         const title = this.scene.add.text(cx, y, `${this.hero.name} — ${this.capitalize(this.hero.heroClass)}`, {
             fontFamily: 'serif',
-            fontSize: '24px',
+            fontSize: fs(24),
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -43,7 +44,7 @@ export class HeroDetailsDialog {
         const xpForNext = 100 * (this.hero.level + 1) * (this.hero.level + 1);
         const levelText = this.scene.add.text(cx, y, `Level ${this.hero.level}    XP: ${this.hero.experience} / ${xpForNext}`, {
             fontFamily: 'Arial',
-            fontSize: '16px',
+            fontSize: fs(16),
             color: '#aaccff',
         }).setOrigin(0.5);
         this.container.add(levelText);
@@ -57,7 +58,7 @@ export class HeroDetailsDialog {
         y += 20;
         const statsHeader = this.scene.add.text(cx, y, 'Attributes', {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: fs(18),
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -81,7 +82,7 @@ export class HeroDetailsDialog {
 
             const statText = this.scene.add.text(col, rowY, `${stats[i].label}: ${stats[i].value}`, {
                 fontFamily: 'Arial',
-                fontSize: '15px',
+                fontSize: fs(15),
                 color: '#ffffff',
             }).setOrigin(0.5);
             this.container.add(statText);
@@ -105,7 +106,7 @@ export class HeroDetailsDialog {
         y += 20;
         const armyHeader = this.scene.add.text(cx, y, 'Army', {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: fs(18),
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -116,7 +117,7 @@ export class HeroDetailsDialog {
         for (const slot of this.hero.army) {
             const slotText = this.scene.add.text(cx, y, `${this.capitalize(slot.unitId)}  x${slot.quantity}`, {
                 fontFamily: 'Arial',
-                fontSize: '15px',
+                fontSize: fs(15),
                 color: '#ffffff',
             }).setOrigin(0.5);
             this.container.add(slotText);
@@ -135,14 +136,14 @@ export class HeroDetailsDialog {
 
         // Close button
         const btnY = cy + panelH / 2 - 40;
-        const btnBg = this.scene.add.rectangle(cx, btnY, 140, 40, 0x2a2a4a)
+        const btnBg = this.scene.add.rectangle(cx, btnY, s(140), s(40), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true });
         this.container.add(btnBg);
 
         const btnText = this.scene.add.text(cx, btnY, 'Close', {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: fs(18),
             color: '#c4a44e',
         }).setOrigin(0.5);
         this.container.add(btnText);

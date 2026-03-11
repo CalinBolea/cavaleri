@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CombatResultData } from '../state/GameStore';
+import { s, fs } from '../utils/uiScale';
 
 export class CombatResultDialog {
     private container: Phaser.GameObjects.Container;
@@ -18,8 +19,8 @@ export class CombatResultDialog {
         this.container.add(overlay);
 
         // Panel
-        const panelW = 500;
-        const panelH = 400;
+        const panelW = Math.min(s(500), width - 20);
+        const panelH = Math.min(s(400), height - 20);
         const cx = width / 2;
         const cy = height / 2;
 
@@ -31,7 +32,7 @@ export class CombatResultDialog {
         const won = this.result.attackerWon;
         const title = this.scene.add.text(cx, cy - 160, won ? 'Victory!' : 'Defeat!', {
             fontFamily: 'serif',
-            fontSize: '32px',
+            fontSize: fs(32),
             color: won ? '#44cc44' : '#cc4444',
             fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -43,7 +44,7 @@ export class CombatResultDialog {
 
         const yourHeader = this.scene.add.text(leftCol, cy - 110, 'Your Losses', {
             fontFamily: 'Arial',
-            fontSize: '16px',
+            fontSize: fs(16),
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -51,7 +52,7 @@ export class CombatResultDialog {
 
         const enemyHeader = this.scene.add.text(rightCol, cy - 110, 'Enemy Losses', {
             fontFamily: 'Arial',
-            fontSize: '16px',
+            fontSize: fs(16),
             color: '#c4a44e',
             fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -63,7 +64,7 @@ export class CombatResultDialog {
             const text = `${loss.unitId}: -${loss.lost} (${loss.remaining} left)`;
             const t = this.scene.add.text(leftCol, yOff, text, {
                 fontFamily: 'Arial',
-                fontSize: '14px',
+                fontSize: fs(14),
                 color: loss.lost > 0 ? '#ff8888' : '#88ff88',
             }).setOrigin(0.5);
             this.container.add(t);
@@ -76,7 +77,7 @@ export class CombatResultDialog {
             const text = `${loss.unitId}: -${loss.lost} (${loss.remaining} left)`;
             const t = this.scene.add.text(rightCol, yOff, text, {
                 fontFamily: 'Arial',
-                fontSize: '14px',
+                fontSize: fs(14),
                 color: loss.lost > 0 ? '#ff8888' : '#88ff88',
             }).setOrigin(0.5);
             this.container.add(t);
@@ -87,21 +88,21 @@ export class CombatResultDialog {
         if (this.result.experienceGained > 0) {
             const xpText = this.scene.add.text(cx, cy + 100, `Experience gained: ${this.result.experienceGained}`, {
                 fontFamily: 'Arial',
-                fontSize: '16px',
+                fontSize: fs(16),
                 color: '#aaccff',
             }).setOrigin(0.5);
             this.container.add(xpText);
         }
 
         // Continue button
-        const btnBg = this.scene.add.rectangle(cx, cy + 150, 160, 40, 0x2a2a4a)
+        const btnBg = this.scene.add.rectangle(cx, cy + 150, s(160), s(40), 0x2a2a4a)
             .setStrokeStyle(2, 0xc4a44e)
             .setInteractive({ useHandCursor: true });
         this.container.add(btnBg);
 
         const btnText = this.scene.add.text(cx, cy + 150, 'Continue', {
             fontFamily: 'serif',
-            fontSize: '18px',
+            fontSize: fs(18),
             color: '#c4a44e',
         }).setOrigin(0.5);
         this.container.add(btnText);

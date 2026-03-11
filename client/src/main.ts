@@ -4,10 +4,20 @@ import { PreloadScene } from './scenes/PreloadScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
 import { AdventureMapScene } from './scenes/AdventureMapScene';
 
+const BASE_HEIGHT = 720;
+const BASE_WIDTH = 1280;
+const MAX_WIDTH = 1920;
+
+const screenRatio = window.innerWidth / window.innerHeight;
+const gameWidth = Math.min(
+    Math.max(Math.round(BASE_HEIGHT * screenRatio), BASE_WIDTH),
+    MAX_WIDTH
+);
+
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    width: 1280,
-    height: 720,
+    width: gameWidth,
+    height: BASE_HEIGHT,
     backgroundColor: '#1a1a2e',
     parent: document.body,
     scene: [BootScene, PreloadScene, MainMenuScene, AdventureMapScene],
