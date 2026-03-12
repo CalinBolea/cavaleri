@@ -713,6 +713,12 @@ export class AdventureMapScene extends Phaser.Scene {
             return;
         }
         if (hex.col === hero.posX && hex.row === hero.posY) {
+            // Check if hero is standing on own town
+            const town = state.towns.find(t => t.posX === hex.col && t.posY === hex.row);
+            if (town && town.ownerId === gameStore.getCurrentPlayer()?.id) {
+                this.scene.start('TownScene', { town, gameId: state.id });
+                return;
+            }
             this.clearPathPreview();
             return;
         }

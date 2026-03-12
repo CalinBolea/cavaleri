@@ -197,6 +197,7 @@ class GameController extends AbstractController
             $town->setPosY($startPositions[$i][1]);
             $town->setFactionId($faction);
             $town->setOwner($player);
+            $town->setBuildings(['village_hall']);
             $game->addTown($town);
         }
 

@@ -86,6 +86,13 @@
           "cost": { "gold": 10000, "wood": 10, "ore": 10 },
           "prerequisites": ["training_grounds"],
           "produces": "angel"
+        },
+        {
+          "id": "mine",
+          "name": "Mine",
+          "cost": { "gold": 500, "wood": 5 },
+          "prerequisites": [],
+          "income": { "wood": 1, "ore": 1 }
         }
       ]
     },
@@ -175,7 +182,8 @@
           "cost": { "gold": 10000, "wood": 10, "ore": 10 },
           "prerequisites": ["hall_of_darkness"],
           "produces": "bone_dragon"
-        }
+        },
+        { "id": "mine", "name": "Mine", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "income": { "wood": 1, "ore": 1 } }
       ]
     },
     {
@@ -195,7 +203,8 @@
         { "id": "enchanted_spring", "name": "Enchanted Spring", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["homestead"], "produces": "pegasus" },
         { "id": "dendroid_arches", "name": "Dendroid Arches", "cost": { "gold": 3500, "wood": 10, "ore": 5 }, "prerequisites": ["enchanted_spring"], "produces": "dendroid_guard" },
         { "id": "unicorn_glade", "name": "Unicorn Glade", "cost": { "gold": 5000, "wood": 20, "ore": 20 }, "prerequisites": ["dendroid_arches"], "produces": "unicorn" },
-        { "id": "dragon_cliffs", "name": "Dragon Cliffs", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["unicorn_glade"], "produces": "green_dragon" }
+        { "id": "dragon_cliffs", "name": "Dragon Cliffs", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["unicorn_glade"], "produces": "green_dragon" },
+        { "id": "mine", "name": "Mine", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "income": { "wood": 1, "ore": 1 } }
       ]
     },
     {
@@ -215,7 +224,8 @@
         { "id": "mage_tower", "name": "Mage Tower", "cost": { "gold": 2500, "wood": 5, "ore": 5 }, "prerequisites": ["mage_guild_1", "golem_factory"], "produces": "mage" },
         { "id": "altar_of_wishes", "name": "Altar of Wishes", "cost": { "gold": 4000, "wood": 10, "ore": 10 }, "prerequisites": ["mage_tower"], "produces": "genie" },
         { "id": "golden_pavilion", "name": "Golden Pavilion", "cost": { "gold": 6000, "wood": 20, "ore": 20 }, "prerequisites": ["altar_of_wishes"], "produces": "naga" },
-        { "id": "cloud_temple", "name": "Cloud Temple", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["golden_pavilion"], "produces": "giant" }
+        { "id": "cloud_temple", "name": "Cloud Temple", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["golden_pavilion"], "produces": "giant" },
+        { "id": "mine", "name": "Mine", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "income": { "wood": 1, "ore": 1 } }
       ]
     },
     {
@@ -235,7 +245,8 @@
         { "id": "demon_gate", "name": "Demon Gate", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["kennels"], "produces": "demon" },
         { "id": "hell_hole", "name": "Hell Hole", "cost": { "gold": 4000, "wood": 5, "ore": 5 }, "prerequisites": ["demon_gate"], "produces": "pit_fiend" },
         { "id": "fire_lake", "name": "Fire Lake", "cost": { "gold": 6000, "wood": 20, "ore": 20 }, "prerequisites": ["hell_hole"], "produces": "efreet" },
-        { "id": "forsaken_palace", "name": "Forsaken Palace", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["fire_lake"], "produces": "devil" }
+        { "id": "forsaken_palace", "name": "Forsaken Palace", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["fire_lake"], "produces": "devil" },
+        { "id": "mine", "name": "Mine", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "income": { "wood": 1, "ore": 1 } }
       ]
     },
     {
@@ -255,7 +266,8 @@
         { "id": "chapel_of_stilled_voices", "name": "Chapel of Stilled Voices", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["pillar_of_eyes"], "produces": "medusa" },
         { "id": "labyrinth", "name": "Labyrinth", "cost": { "gold": 4000, "wood": 10, "ore": 10 }, "prerequisites": ["chapel_of_stilled_voices"], "produces": "minotaur" },
         { "id": "manticore_lair", "name": "Manticore Lair", "cost": { "gold": 6000, "wood": 20, "ore": 20 }, "prerequisites": ["labyrinth"], "produces": "manticore" },
-        { "id": "dragon_cave", "name": "Dragon Cave", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["manticore_lair"], "produces": "red_dragon" }
+        { "id": "dragon_cave", "name": "Dragon Cave", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["manticore_lair"], "produces": "red_dragon" },
+        { "id": "mine", "name": "Mine", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "income": { "wood": 1, "ore": 1 } }
       ]
     },
     {
@@ -275,7 +287,8 @@
         { "id": "ogre_fort", "name": "Ogre Fort", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["orc_tower"], "produces": "ogre" },
         { "id": "cliff_nest", "name": "Cliff Nest", "cost": { "gold": 4000, "wood": 10, "ore": 10 }, "prerequisites": ["ogre_fort"], "produces": "roc" },
         { "id": "cyclops_cave", "name": "Cyclops Cave", "cost": { "gold": 5000, "wood": 20, "ore": 20 }, "prerequisites": ["cliff_nest"], "produces": "cyclops" },
-        { "id": "behemoth_lair", "name": "Behemoth Lair", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["cyclops_cave"], "produces": "behemoth" }
+        { "id": "behemoth_lair", "name": "Behemoth Lair", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["cyclops_cave"], "produces": "behemoth" },
+        { "id": "mine", "name": "Mine", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "income": { "wood": 1, "ore": 1 } }
       ]
     },
     {
@@ -295,7 +308,8 @@
         { "id": "basilisk_pit", "name": "Basilisk Pit", "cost": { "gold": 2500, "wood": 10, "ore": 10 }, "prerequisites": ["serpent_fly_hive"], "produces": "basilisk" },
         { "id": "gorgon_lair", "name": "Gorgon Lair", "cost": { "gold": 4000, "wood": 10, "ore": 10 }, "prerequisites": ["basilisk_pit"], "produces": "gorgon" },
         { "id": "wyvern_nest", "name": "Wyvern Nest", "cost": { "gold": 5000, "wood": 20, "ore": 20 }, "prerequisites": ["gorgon_lair"], "produces": "wyvern" },
-        { "id": "hydra_pond", "name": "Hydra Pond", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["wyvern_nest"], "produces": "hydra" }
+        { "id": "hydra_pond", "name": "Hydra Pond", "cost": { "gold": 10000, "wood": 10, "ore": 10 }, "prerequisites": ["wyvern_nest"], "produces": "hydra" },
+        { "id": "mine", "name": "Mine", "cost": { "gold": 500, "wood": 5 }, "prerequisites": [], "income": { "wood": 1, "ore": 1 } }
       ]
     }
   ]

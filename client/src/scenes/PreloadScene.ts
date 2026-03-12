@@ -35,7 +35,10 @@ export class PreloadScene extends Phaser.Scene {
 
         // Load shared data
         this.load.json('factions', '/shared/data/factions.json');
-        this.load.json('castle-units', '/shared/data/units/castle.json');
+        const factionIds = ['castle', 'necropolis', 'rampart', 'tower', 'inferno', 'dungeon', 'stronghold', 'fortress'];
+        for (const id of factionIds) {
+            this.load.json(`${id}-units`, `/shared/data/units/${id}.json`);
+        }
     }
 
     create(): void {

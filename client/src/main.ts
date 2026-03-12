@@ -3,6 +3,7 @@ import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
 import { AdventureMapScene } from './scenes/AdventureMapScene';
+import { TownScene } from './scenes/TownScene';
 
 const BASE_HEIGHT = 720;
 const BASE_WIDTH = 1280;
@@ -20,7 +21,7 @@ const config: Phaser.Types.Core.GameConfig = {
     height: BASE_HEIGHT,
     backgroundColor: '#1a1a2e',
     parent: document.body,
-    scene: [BootScene, PreloadScene, MainMenuScene, AdventureMapScene],
+    scene: [BootScene, PreloadScene, MainMenuScene, AdventureMapScene, TownScene],
     input: {
         activePointers: 2,
     },

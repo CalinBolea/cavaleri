@@ -55,6 +55,8 @@ export interface TownData {
     posY: number;
     factionId: string;
     ownerId: string | null;
+    buildings: string[];
+    builtToday: boolean;
 }
 
 export interface CombatLoss {

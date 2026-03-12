@@ -6,6 +6,8 @@ use App\Entity\Game;
 use App\Entity\Hero;
 use App\Entity\NeutralStack;
 use App\Entity\Player;
+use App\Entity\Town;
+use App\Service\GameDataProvider;
 use App\Service\GameEngine\TurnManager;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +21,16 @@ class TurnManagerTest extends TestCase
     {
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->em->method('flush');
-        $this->turnManager = new TurnManager($this->em);
+
+        $gameDataProvider = $this->createMock(GameDataProvider::class);
+        $gameDataProvider->method('getFaction')->willReturn([
+            'id' => 'castle',
+            'buildings' => [
+                ['id' => 'village_hall', 'name' => 'Village Hall', 'cost' => ['gold' => 0], 'prerequisites' => [], 'income' => ['gold' => 500]],
+            ],
+        ]);
+
+        $this->turnManager = new TurnManager($this->em, $gameDataProvider);
     }
 
     public function testEndTurnAdvancesDay(): void
@@ -181,6 +192,15 @@ class TurnManagerTest extends TestCase
         $player->addHero($hero);
 
         $game->addPlayer($player);
+
+        // Add a town with village_hall for income
+        $town = new Town();
+        $town->setPosX(3);
+        $town->setPosY(3);
+        $town->setFactionId('castle');
+        $town->setBuildings(['village_hall']);
+        $player->addTown($town);
+        $game->addTown($town);
 
         // Add a neutral stack so the win condition doesn't trigger
         $neutral = new NeutralStack();

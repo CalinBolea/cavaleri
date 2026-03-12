@@ -1,4 +1,4 @@
-import { GameState, CombatData, LevelUpData, TownData } from '../state/GameStore';
+import { GameState, CombatData, LevelUpData, TownData, Resources } from '../state/GameStore';
 
 const API_BASE = '/api';
 
@@ -79,6 +79,19 @@ class ApiClient {
     async deleteGame(gameId: string): Promise<void> {
         const response = await fetch(`${API_BASE}/games/${gameId}`, { method: 'DELETE' });
         if (!response.ok) throw new Error(`Failed to delete game: ${response.statusText}`);
+    }
+
+    async buildInTown(gameId: string, townId: string, buildingId: string): Promise<{ town: TownData; resources: Resources }> {
+        const response = await fetch(`${API_BASE}/games/${gameId}/towns/${townId}/build`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ buildingId }),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to build');
+        }
+        return response.json();
     }
 
     async endTurn(gameId: string): Promise<GameState> {

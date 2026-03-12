@@ -4,12 +4,15 @@ namespace App\Service\GameEngine;
 
 use App\Entity\Game;
 use App\Entity\Player;
+use App\Service\GameDataProvider;
 use Doctrine\ORM\EntityManagerInterface;
 
 class TurnManager
 {
-    public function __construct(private EntityManagerInterface $em)
-    {
+    public function __construct(
+        private EntityManagerInterface $em,
+        private GameDataProvider $gameDataProvider,
+    ) {
     }
 
     public function endTurn(Game $game): void
@@ -90,8 +93,27 @@ class TurnManager
     private function applyIncome(Player $player): void
     {
         $resources = $player->getResources();
-        // Base income: 500 gold per day from village hall
-        $resources['gold'] = ($resources['gold'] ?? 0) + 500;
+        $faction = $this->gameDataProvider->getFaction($player->getFaction());
+        $buildingDefs = [];
+        if ($faction) {
+            foreach ($faction['buildings'] as $b) {
+                $buildingDefs[$b['id']] = $b;
+            }
+        }
+
+        foreach ($player->getTowns() as $town) {
+            $town->setBuiltToday(false);
+
+            foreach ($town->getBuildings() as $buildingId) {
+                $def = $buildingDefs[$buildingId] ?? null;
+                if ($def && isset($def['income'])) {
+                    foreach ($def['income'] as $resource => $amount) {
+                        $resources[$resource] = ($resources[$resource] ?? 0) + $amount;
+                    }
+                }
+            }
+        }
+
         $player->setResources($resources);
     }
 }
