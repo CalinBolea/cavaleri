@@ -67,7 +67,6 @@ export class AdventureMapScene extends Phaser.Scene {
     private pointerDownY = 0;
     private pointerIsDown = false;
     private readonly DRAG_THRESHOLD = 10;
-    private lastPinchDistance = 0;
     private isTouchDevice = false;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
@@ -209,8 +208,10 @@ export class AdventureMapScene extends Phaser.Scene {
             this.isDragging = false;
         });
 
-        // Zoom via mouse wheel
-        this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gos: Phaser.GameObjects.GameObject[], _dx: number, dy: number) => {
+        // Zoom via mouse wheel (ctrlKey = trackpad pinch, let browser handle it)
+        this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gos: Phaser.GameObjects.GameObject[], _dx: number, dy: number, event: WheelEvent) => {
+            if (event.ctrlKey) return; // let browser handle trackpad pinch-to-zoom
+            event.preventDefault();
             if (dy > 0) this.setZoomLevel(this.zoomIndex - 1);   // scroll down = zoom out
             else if (dy < 0) this.setZoomLevel(this.zoomIndex + 1); // scroll up = zoom in
         });
@@ -245,34 +246,6 @@ export class AdventureMapScene extends Phaser.Scene {
             if (pointer.y > cam.height - EDGE) cam.scrollY += SCROLL_SPEED;
         }
 
-        // Pinch-to-zoom
-        this.handlePinchZoom();
-    }
-
-    private handlePinchZoom(): void {
-        const pointer1 = this.input.pointer1;
-        const pointer2 = this.input.pointer2;
-
-        if (pointer1.isDown && pointer2.isDown) {
-            const dx = pointer1.x - pointer2.x;
-            const dy = pointer1.y - pointer2.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (this.lastPinchDistance > 0) {
-                const delta = dist - this.lastPinchDistance;
-                if (delta > 20) {
-                    this.setZoomLevel(this.zoomIndex + 1);
-                    this.lastPinchDistance = dist;
-                } else if (delta < -20) {
-                    this.setZoomLevel(this.zoomIndex - 1);
-                    this.lastPinchDistance = dist;
-                }
-            } else {
-                this.lastPinchDistance = dist;
-            }
-        } else {
-            this.lastPinchDistance = 0;
-        }
     }
 
     private setZoomLevel(index: number): void {

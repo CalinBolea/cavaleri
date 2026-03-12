@@ -24,6 +24,9 @@ const config: Phaser.Types.Core.GameConfig = {
     scene: [BootScene, PreloadScene, MainMenuScene, AdventureMapScene, TownScene],
     input: {
         activePointers: 2,
+        mouse: {
+            preventDefaultWheel: false,
+        },
     },
     scale: {
         mode: Phaser.Scale.FIT,
